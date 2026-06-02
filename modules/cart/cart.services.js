@@ -1,6 +1,7 @@
 import * as cartRepo from "./cart.repo.js";
 import withTransaction from "../../utils/transaction.util.js";
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
+import { viewProduct } from "../products/product.repo.js";
 
 //Add item to cart
 const addProductToCart = async (data, userId) => {
@@ -8,6 +9,13 @@ const addProductToCart = async (data, userId) => {
         var cart = await cartRepo.findCartByUserId(userId, {db: client});
         if (!cart) {
             cart = await cartRepo.initializeCart(userId, new Date(), {db: client});
+        }
+
+        const product = await viewProduct(data.productId, {db: client});
+        throwIfNotFound(product, "Product not found");
+
+        if (product.stock < quantity) {
+            throw AppError("Product is out of stock", 400);
         }
 
         const newData = {
@@ -69,15 +77,21 @@ const editProductQuantity = async (data, userId) => {
         throwIfNotFound(cart, "Your cart is empty");
 
         try {
+            const product = await viewProduct(data.productId, {db: client});
+            throwIfNotFound(product, "Product not found");
+            
+            if (product.stock < quantity) {
+                throw AppError("Product is out of stock", 400);
+            }
+            
             const newData = {...data, userId}
             var result = await cartRepo.editProductQuantity(newData, {db: client});
-            throwIfNotFound(result, "Product not found");
             return {
                 data: result
             };
         } catch (error) {
             if (error.code === "23514") {
-                console.log("Product Quantity Can't be zero or less then")
+                console.log("Product quantity can't be zero or less then")
                 throw AppError("Product can't be null or negative", 422);
             }
             throw error;
