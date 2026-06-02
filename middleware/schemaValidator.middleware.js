@@ -1,30 +1,27 @@
 const schemaValidator = (schema) => {
     return (req, res, next) => {
-        const query = req.body || req.query || req.params;
-        const {error} = schema.validate(query);
-        if (error) {
-            return res.status(400).json({
-                message: error.details[0].message
-            });
-        }
+        const data = {
+        ...req.body,
+        ...req.params,
+        ...req.query
+    };
+
+    const { error, value } = schema.validate(data, {
+        abortEarly: false
+    });
+
+    if (error) {
+        return res.status(400).json({
+            message: "Validation error",
+            errors: error.details.map(err => err.message)
+        });
+    }
+
+        req.validatedData = value;
 
         next();
     }
 }
 
 
-const paramsSchemaValidator = (schema) => {
-    return (req, res, next) => {
-        const query = req.params;
-        const {error} = schema.validate(query);
-        if (error) {
-            return res.status(400).json({
-                message: error.details[0].message
-            });
-        }
-
-        next();
-    }
-}
-export {paramsSchemaValidator}
 export default schemaValidator;

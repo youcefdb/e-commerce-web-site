@@ -24,7 +24,33 @@ const addReview = async(req, res) => {
     }
 }
 
+//Edit review
+const editReview = async(req, res) => {
+    try {
+        const result = await reviewsServices.editReview(req.body, req.params.id, req.user.id);
+        return res.status(200).json(result);
+    } catch (error) {
+       return res.status(error.statusCode || 500).json({
+            message: error.message || "Internal Server Error"
+        }); 
+    }
+}
+
+//Delete review
+const deleteReview = async(req, res) => {
+    try {
+        const result = await reviewsServices.deleteReview(req.params.id, req.user.id);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            message: error.message || "Internal Server Error"
+        });
+    }
+}
+
 export{
     getReviews,
-    addReview
+    addReview,
+    editReview,
+    deleteReview
 }
