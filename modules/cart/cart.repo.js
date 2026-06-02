@@ -42,18 +42,18 @@ const getCartContent = async(data, ctx = {db: conn}) => {
         WITH products_items AS (
             SELECT id, name, price, image
             FROM products
-        )
+        ),
 
-        WITH user_cart AS (
+        user_cart AS (
             SELECT id, user_id
             FROM carts
             WHERE user_id = $1
         )
 
-        SELECT p.*, ci.quantity, SUM(p.price * ci.quantity) AS total
+        SELECT pi.* ,ci.quantity, (pi.price * ci.quantity) AS item_total
         FROM cart_items ci
         JOIN products_items pi ON pi.id = ci.product_id
-        JOIN user_cart ON uc.id = cart_items ci.cart_id
+        JOIN user_cart uc ON uc.id = ci.cart_id
     `;
 
     const {rows} = await ctx.db.query(query, [data.userId]);
@@ -61,18 +61,18 @@ const getCartContent = async(data, ctx = {db: conn}) => {
 }
 
 //Remove product from cart
-const removeProductFromCart = async (data, ctx) => {
+const removeProductFromCart = async (data, ctx = {db: conn}) => {
     const query = `
         WITH user_cart AS (
-            SELECT id, user_id
+            SELECT id
             FROM carts
             WHERE user_id = $1
         )
-
-        DELETE FROM cart_items ci 
-        JOIN user_cart uc ON uc.id = ci.cart_id
-        WHERE product_id = $2
-        RETURNING id, cart_id
+        DELETE FROM cart_items ci
+        USING user_cart uc
+        WHERE uc.id = ci.cart_id
+        AND ci.product_id = $2
+        RETURNING ci.id, ci.cart_id;
     `;
 
     const {rows} = await ctx.db.query(query, [data.userId, data.productId]);
@@ -87,15 +87,15 @@ const editProductQuantity = async(data, ctx) => {
             FROM carts
             WHERE user_id = $1
         )
-
         UPDATE cart_items ci
-        SET ci.quantity = $2
-        JOIN user_cart uc ON uc.id = ci.cart_id
-        WHERE ci.product_id = $3
-        RETURNING cart_id, product_id, quantity
+        SET quantity = $2
+        FROM user_cart uc
+        WHERE uc.id = ci.cart_id
+        AND ci.product_id = $3
+        RETURNING cart_id, product_id, quantity;
     `;
 
-    const {rows} = await ctx.query.db(query, [data.userId, data.productId, data.quantity]);
+    const {rows} = await ctx.db.query(query, [data.userId, data.quantity, data.productId]);
     return rows[0];
 }
 

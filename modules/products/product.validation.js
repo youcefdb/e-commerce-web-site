@@ -10,12 +10,12 @@ const getProductsSchema = Joi.object({
     order: Joi.string().valid("asc", "desc"),
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(20),
-});
+}).unknown(false);
 
 //Schema for getting product details
 const productDetailsSchema = Joi.object({
     id: Joi.string().trim().uuid().required()
-}).unknown(true);
+}).unknown(false);
 
 
 export {

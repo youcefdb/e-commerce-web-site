@@ -32,14 +32,19 @@ const getCartContent = async(userId) => {
 
     //Get content
     const result = await cartRepo.getCartContent({userId});
+    const cart_total = result.reduce(
+        (sum, item) => sum + parseFloat(item.item_total), 0
+    );
+
     throwIfNotFound(result, "Your cart is empty");
     return {
-        data: result
+        data: result,
+        cart_total
     };
 };
 
 //Remove product from user cart
-const removeCartProducts = async (data, userId) => {
+const removeProductFromCart = async (data, userId) => {
     return withTransaction(async(client) => {
         //Find cart
         const cart = await cartRepo.findCartByUserId(userId, {db: client});
@@ -49,6 +54,11 @@ const removeCartProducts = async (data, userId) => {
         const newData = {...data, userId};
         const result = await cartRepo.removeProductFromCart(newData, {db: client});
         throwIfNotFound(result, "Product not found");
+
+        return {
+            message: "Product deleted successfully",
+            data: result
+        }
     });
 }
 
@@ -60,8 +70,11 @@ const editProductQuantity = async (data, userId) => {
 
         try {
             const newData = {...data, userId}
-            var result = await cartRepo.editProductQuantity(data, {db: client});
+            var result = await cartRepo.editProductQuantity(newData, {db: client});
             throwIfNotFound(result, "Product not found");
+            return {
+                data: result
+            };
         } catch (error) {
             if (error.code === "23514") {
                 console.log("Product Quantity Can't be zero or less then")
@@ -75,6 +88,6 @@ const editProductQuantity = async (data, userId) => {
 export{
     addProductToCart,
     getCartContent,
-    removeCartProducts,
+    removeProductFromCart,
     editProductQuantity
 }

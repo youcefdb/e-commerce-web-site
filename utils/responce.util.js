@@ -1,6 +1,6 @@
 
 //Get pagination with errors handling
-const getPagination = (page = 2, limit = 10) => {
+const getPagination = (page = 1, limit = 10) => {
     
     //handle negative values
     const safePage = Math.max(parseInt(page) || 2, 1); 

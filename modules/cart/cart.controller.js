@@ -25,9 +25,9 @@ const getCartContent = async(req, res) => {
 }
 
 //Remove product from cart
-const removeCartProducts = async(req, res) => {
+const removeProductFromCart = async(req, res) => {
     try {
-        const result = await cartServices.removeCartProducts(req.body, req.user.id);
+        const result = await cartServices.removeProductFromCart(req.body, req.user.id);
         return res.status(200).json(result);
     } catch (error) {
         res.status(error.statusCode || 500).json({
@@ -51,6 +51,6 @@ const editProductQuantity = async(req, res) => {
 export {
     addProductToCart,
     getCartContent,
-    removeCartProducts,
+    removeProductFromCart,
     editProductQuantity
 }

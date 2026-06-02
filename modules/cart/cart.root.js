@@ -8,7 +8,7 @@ const cartRoot = express.Router();
 cartRoot
     .get("/", cartController.getCartContent)
     .post("/", schemaValidator(productSchema.addProductToCartSchema), cartController.addProductToCart)
-    .delete("/", schemaValidator(productSchema.removeCartProductSchema),cartController.removeCartProducts)
     .patch("/", schemaValidator(productSchema.editProductQuantitySchema), cartController.editProductQuantity)
+    .delete("/", schemaValidator(productSchema.removeCartProductSchema),cartController.removeProductFromCart)
 
 export default cartRoot;

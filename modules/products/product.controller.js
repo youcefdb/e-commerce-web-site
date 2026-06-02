@@ -47,7 +47,8 @@ const getProducts = async (req, res) => {
 //Get product details
 const viewProduct = async(req, res) => {
     try {
-        const result = await productServers.getProducts(req.params.productId);
+        const result = await productServers.viewProduct(req.params.id);
+        return res.status(200).json(result);
     } catch (error) {
         return res.status(error.statusCode || 500).json({
             message: error.message || "Internal Server Error"

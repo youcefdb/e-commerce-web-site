@@ -16,7 +16,7 @@ const registerValidationSchema = Joi.object({
             "string.min": "Name must be at least 2 characters",
             "any.required": "Name is required"
         })
-}).unknown(true);
+}).unknown(false);
 
 
 //Log in validation schema
@@ -30,7 +30,7 @@ const loginValidationSchema = Joi.object({
         "string.min": "Password must be at least 8 characters",
         "any.required": "Password is required"
     }),
-}).unknown(true);
+}).unknown(false);
 
 
 export{
