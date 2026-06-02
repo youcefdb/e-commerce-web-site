@@ -1,4 +1,4 @@
-import conn from "../config/db.config"
+import conn from "../config/db.config.js"
 
 const withTransaction = async (callback) => {
     const client = await conn.connect();

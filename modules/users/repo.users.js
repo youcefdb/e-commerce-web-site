@@ -1,15 +1,15 @@
 import conn from "../../config/db.config.js";
 
 //Update user infos
-const updateUser = async (values, ctx) => {
+const updateUser = async (params, values, id, ctx) => {
     const query = `
         UPDATE users
-        SET ${values}
-        WHERE id = ${values.id}
-        RETURNING *
+        SET ${params.join(',')}
+        WHERE id = $1
+        RETURNING name, email, updated_at
     `;
 
-    const {rows} = await ctx.db.query(query, values);
+    const {rows} = await ctx.db.query(query, [id, ...values]);
     return rows[0];
 }
 

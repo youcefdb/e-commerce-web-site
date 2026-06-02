@@ -13,8 +13,9 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(120) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
+    password TEXT,
     role VARCHAR(20) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin')),
+    provider VARCHAR(50) NOT NULL DEFAULT 'local',
     avatar TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -31,11 +32,8 @@ ON users(role);
 
 CREATE TABLE categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     name VARCHAR(120) NOT NULL UNIQUE,
-
     slug VARCHAR(140) NOT NULL UNIQUE,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -45,33 +43,21 @@ CREATE TABLE categories (
 
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     category_id UUID NOT NULL,
-
     name VARCHAR(255) NOT NULL,
-
     slug VARCHAR(255) NOT NULL UNIQUE,
-
     description TEXT,
-
     price NUMERIC(12,2) NOT NULL
         CHECK (price >= 0),
-
     stock INTEGER NOT NULL DEFAULT 0
         CHECK (stock >= 0),
-
     image TEXT,
-
     rating NUMERIC(3,2) NOT NULL DEFAULT 0
         CHECK (rating >= 0 AND rating <= 5),
-
     num_reviews INTEGER NOT NULL DEFAULT 0
         CHECK (num_reviews >= 0),
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     CONSTRAINT fk_products_category
         FOREIGN KEY (category_id)
         REFERENCES categories(id)
@@ -84,11 +70,8 @@ CREATE TABLE products (
 
 CREATE TABLE carts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     user_id UUID NOT NULL UNIQUE,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     CONSTRAINT fk_carts_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
@@ -101,24 +84,18 @@ CREATE TABLE carts (
 
 CREATE TABLE cart_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     cart_id UUID NOT NULL,
-
     product_id UUID NOT NULL,
-
     quantity INTEGER NOT NULL
         CHECK (quantity > 0),
-
     CONSTRAINT fk_cart_items_cart
         FOREIGN KEY (cart_id)
         REFERENCES carts(id)
         ON DELETE CASCADE,
-
     CONSTRAINT fk_cart_items_product
         FOREIGN KEY (product_id)
         REFERENCES products(id)
         ON DELETE CASCADE,
-
     CONSTRAINT unique_cart_product
         UNIQUE(cart_id, product_id)
 );
@@ -129,12 +106,9 @@ CREATE TABLE cart_items (
 
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     user_id UUID NOT NULL,
-
     total_price NUMERIC(12,2) NOT NULL
         CHECK (total_price >= 0),
-
     status VARCHAR(30) NOT NULL DEFAULT 'pending'
         CHECK (
             status IN (
@@ -148,15 +122,10 @@ CREATE TABLE orders (
         ),
 
     shipping_address JSONB NOT NULL,
-
     payment_method VARCHAR(50) NOT NULL,
-
     paid_at TIMESTAMPTZ,
-
     delivered_at TIMESTAMPTZ,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     CONSTRAINT fk_orders_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
@@ -169,22 +138,16 @@ CREATE TABLE orders (
 
 CREATE TABLE order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     order_id UUID NOT NULL,
-
     product_id UUID NOT NULL,
-
     quantity INTEGER NOT NULL
         CHECK (quantity > 0),
-
     price NUMERIC(12,2) NOT NULL
         CHECK (price >= 0),
-
     CONSTRAINT fk_order_items_order
         FOREIGN KEY (order_id)
         REFERENCES orders(id)
         ON DELETE CASCADE,
-
     CONSTRAINT fk_order_items_product
         FOREIGN KEY (product_id)
         REFERENCES products(id)
@@ -197,24 +160,18 @@ CREATE TABLE order_items (
 
 CREATE TABLE reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
     user_id UUID NOT NULL,
-
     product_id UUID NOT NULL,
-
     rating INTEGER NOT NULL
         CHECK (rating >= 1 AND rating <= 5),
-
     comment TEXT,
-
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
     CONSTRAINT fk_reviews_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
         ON DELETE CASCADE,
 
-    CONSTRAINT fk_reviews_product
+    CONSTRAINT fk_reviews_produc
         FOREIGN KEY (product_id)
         REFERENCES products(id)
         ON DELETE CASCADE,
