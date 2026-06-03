@@ -47,15 +47,11 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
-    price NUMERIC(12,2) NOT NULL
-        CHECK (price >= 0),
-    stock INTEGER NOT NULL DEFAULT 0
-        CHECK (stock >= 0),
+    price NUMERIC(12,2) NOT NULL CHECK (price >= 0),
+    stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
     image TEXT,
-    rating NUMERIC(3,2) NOT NULL DEFAULT 0
-        CHECK (rating >= 0 AND rating <= 5),
-    num_reviews INTEGER NOT NULL DEFAULT 0
-        CHECK (num_reviews >= 0),
+    rating NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
+    num_reviews INTEGER NOT NULL DEFAULT 0 CHECK (num_reviews >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_products_category
@@ -140,10 +136,8 @@ CREATE TABLE order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL,
     product_id UUID NOT NULL,
-    quantity INTEGER NOT NULL
-        CHECK (quantity > 0),
-    price NUMERIC(12,2) NOT NULL
-        CHECK (price >= 0),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    price NUMERIC(12,2) NOT NULL CHECK (price >= 0),
     CONSTRAINT fk_order_items_order
         FOREIGN KEY (order_id)
         REFERENCES orders(id)
@@ -192,6 +186,27 @@ CREATE TABLE refresh_tokens(
 
 CREATE INDEX idx_refresh_tokens_user
 ON refresh_tokens(user_id);
+
+-- =========================================================
+-- wish list
+-- =========================================================
+
+CREATE TABLE wishlists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =========================================================
+-- wish list item
+-- =========================================================
+
+CREATE TABLE wishlist_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wishlist_id UUID NOT NULL REFERENCES wishlists(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE(wishlist_id, product_id)
+);
 
 -- =========================================================
 -- INDEXES

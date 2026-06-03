@@ -7,6 +7,8 @@ import productRoot from './modules/products/product.root.js';
 import cartRoot from './modules/cart/cart.root.js';
 import categoriesRoot from './modules/categories/categories.root.js';
 import reviewRoot from './modules/reviews/reviews.root.js';
+import whiteListRoot from './modules/wishlist/wishlist.root.js';
+import orderRoot from './modules/orders/orders.root.js';
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use("/users", userRoot);
 app.use("/categories", categoriesRoot);
 app.use("/cart", cartRoot);
 app.use("/reviews", reviewRoot);
+app.use("/whishList", whiteListRoot);
+app.use("/orders", orderRoot);
 
 
 export default app;
