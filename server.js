@@ -20,13 +20,13 @@ app.use(express.json());
 
 app.use("/auth", authRoot);
 app.use("/product", productRoot);
+app.use("/categories", categoriesRoot);
+app.use("/cart", cartRoot);
+app.use("/reviews", reviewRoot);
 
 app.use(verifyJwtToken);
 
 app.use("/users", userRoot);
-app.use("/categories", categoriesRoot);
-app.use("/cart", cartRoot);
-app.use("/reviews", reviewRoot);
 app.use("/whishList", whiteListRoot);
 app.use("/orders", orderRoot);
 

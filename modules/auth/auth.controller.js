@@ -3,9 +3,13 @@ import * as authServices from "./auth.services.js";
 //Create new account 
 const register = async(req, res) => {
     try {
-        console.log(req.body);
-        await authServices.register(req.body);
-        return res.status(201);
+        const {accessToken, refreshToken} = await authServices.register(
+            req.body,
+            req.headers["user-agent"],
+            req.ip
+        );
+        res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 30});
+        return res.status(201).json(accessToken);
     } catch (error) {
         return res.status(201).json({
             message: "User created successfully"

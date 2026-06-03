@@ -22,8 +22,12 @@ const register = async (data) => {
         const newData = {...data, password: hashPs};
         user = await authRepo.createUser(newData, {db: client});
         
+        const {accessToken, refreshToken} = await generateAndStoreTokens(user);
+        
         return{
-            message: "user created successfully"
+            message: "user created successfully",
+            accessToken,
+            refreshToken
         };
     });
 }
