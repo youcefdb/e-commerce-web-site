@@ -4,6 +4,6 @@ import express from "express";
 const categoriesRoot = express.Router();
 
 categoriesRoot
-    .get("/", categoriesController.getCategories);
+    .get("/v1/", categoriesController.getCategories);
 
 export default categoriesRoot

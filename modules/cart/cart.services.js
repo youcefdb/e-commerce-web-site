@@ -14,7 +14,7 @@ const addProductToCart = async (data, userId) => {
         const product = await viewProduct(data.productId, {db: client});
         throwIfNotFound(product, "Product not found");
 
-        if (product.stock < quantity) {
+        if (product.stock < data.quantity) {
             throw AppError("Product is out of stock", 400);
         }
 

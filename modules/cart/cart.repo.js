@@ -50,7 +50,14 @@ const getCartContent = async(data, ctx = {db: conn}) => {
             WHERE user_id = $1
         )
 
-        SELECT pi.* ,ci.quantity, (pi.price * ci.quantity) AS item_total
+        SELECT
+        pi.id AS product_id,
+        pi.name,
+        pi.price,
+        pi.stock,
+        pi.image,
+        ci.quantity,
+        (pi.price * ci.quantity) AS item_total
         FROM cart_items ci
         JOIN products_items pi ON pi.id = ci.product_id
         JOIN user_cart uc ON uc.id = ci.cart_id
@@ -62,7 +69,7 @@ const getCartContent = async(data, ctx = {db: conn}) => {
 
 //Remove product from cart
 const removeProductFromCart = async (data, ctx = {db: conn}) => {
-    const query = `
+    var query = `
         WITH user_cart AS (
             SELECT id
             FROM carts
@@ -71,11 +78,20 @@ const removeProductFromCart = async (data, ctx = {db: conn}) => {
         DELETE FROM cart_items ci
         USING user_cart uc
         WHERE uc.id = ci.cart_id
-        AND ci.product_id = $2
-        RETURNING ci.id, ci.cart_id;
     `;
 
-    const {rows} = await ctx.db.query(query, [data.userId, data.productId]);
+    var values = [data.userId];
+
+    if (data.productId !== undefined) {
+        query += `
+            AND ci.product_id = $2
+        `;
+        values.push(data.productId);
+    }
+
+    query += ` RETURNING ci.id, ci.cart_id;`;
+
+    const {rows} = await ctx.db.query(query, values);
     return rows[0];
 }
 

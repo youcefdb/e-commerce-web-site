@@ -6,9 +6,9 @@ import * as productSchema from "./cart.validation.js";
 const cartRoot = express.Router();
 
 cartRoot
-    .get("/", cartController.getCartContent)
-    .post("/", schemaValidator(productSchema.addProductToCartSchema), cartController.addProductToCart)
-    .patch("/", schemaValidator(productSchema.editProductQuantitySchema), cartController.editProductQuantity)
-    .delete("/", schemaValidator(productSchema.removeCartProductSchema),cartController.removeProductFromCart)
+    .get("/v1/", cartController.getCartContent)
+    .post("/v1/", schemaValidator(productSchema.addProductToCartSchema), cartController.addProductToCart)
+    .patch("/v1/", schemaValidator(productSchema.editProductQuantitySchema), cartController.editProductQuantity)
+    .delete("/v1/", schemaValidator(productSchema.removeCartProductSchema),cartController.removeProductFromCart)
 
 export default cartRoot;

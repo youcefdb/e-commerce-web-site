@@ -3,7 +3,7 @@ import conn from "../../config/db.config.js";
 //Get product details
 const viewProduct = async (id, ctx = {db: conn}) => {
     const query = `
-        SELECT name, description, image, price, stock, rating, num_reviews
+        SELECT id, name, description, image, price, stock, rating, num_reviews
         FROM products
         WHERE id = $1
     `;
@@ -81,8 +81,22 @@ const getProducts = async (filter, limit, offset, ctx = {db: conn}) => {
     return rows;
 }
 
+//Increment or decreament product quantity
+const productStock = async (data, ctx) => {
+    const query = `
+        UPDATE products
+        SET stock = $1 
+        WHERE id = $2
+        RETURNING id
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.stock, data.id]);
+    return rows[0];
+}
+
 
 export {
     viewProduct,
-    getProducts
+    getProducts,
+    productStock
 }

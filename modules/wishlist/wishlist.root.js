@@ -6,8 +6,8 @@ import { addToWishListSchema, delteFromWishlistSchema, getWishListSchema} from "
 const wishlistRoot = express.Router();
 
 wishlistRoot
-    .get("/", schemaValidator(getWishListSchema), wishlistController.getWhishlist)
-    .post("/", schemaValidator(addToWishListSchema), wishlistController.addTowishlist)
-    .delete("/:id", schemaValidator(delteFromWishlistSchema), wishlistController.deleteFromWhishList)
+    .get("/v1/", schemaValidator(getWishListSchema), wishlistController.getWhishlist)
+    .post("/v1/", schemaValidator(addToWishListSchema), wishlistController.addTowishlist)
+    .delete("/:id/v1/", schemaValidator(delteFromWishlistSchema), wishlistController.deleteFromWhishList)
 
 export default wishlistRoot;

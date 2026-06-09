@@ -3,8 +3,8 @@
 const getPagination = (page = 1, limit = 10) => {
     
     //handle negative values
-    const safePage = Math.max(parseInt(page) || 2, 1); 
-    const safeLimit = Math.max(parseInt(limit) || 10, 1);
+    const safePage = Math.max(Number(page) || 1, 1);
+    const safeLimit = Math.max(Number(limit) || 10, 1);
 
     const offset = (safePage - 1) * safeLimit
 

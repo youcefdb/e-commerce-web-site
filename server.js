@@ -1,4 +1,6 @@
 import express from 'express';
+import cors from "cors";
+import helmet from "helmet";
 import cookieParser from 'cookie-parser';
 import verifyJwtToken from './middleware/jwtVerification.middleware.js';
 import authRoot from './modules/auth/auth.root.js';
@@ -9,25 +11,35 @@ import categoriesRoot from './modules/categories/categories.root.js';
 import reviewRoot from './modules/reviews/reviews.root.js';
 import whiteListRoot from './modules/wishlist/wishlist.root.js';
 import orderRoot from './modules/orders/orders.root.js';
+import { apiLimiter, authLimiter } from './middleware/rateLimit.middleware.js';
 
 const app = express();
 
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true
+}))
+
+//add secure headers
+app.use(helmet());
 //Middleware for reading cookie and set theme on request
 app.use(cookieParser());
 //Middleware for parsing Json format into readable format (body)
 app.use(express.json());
 
 
-app.use("/auth", authRoot);
-app.use("/product", productRoot);
+app.use("/auth", authLimiter, authRoot);
+app.use(apiLimiter);
+app.use("/products", productRoot);
 app.use("/categories", categoriesRoot);
-app.use("/cart", cartRoot);
 app.use("/reviews", reviewRoot);
+
 
 app.use(verifyJwtToken);
 
 app.use("/users", userRoot);
-app.use("/whishList", whiteListRoot);
+app.use("/carts", cartRoot);
+app.use("/whishLists", whiteListRoot);
 app.use("/orders", orderRoot);
 
 

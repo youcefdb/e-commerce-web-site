@@ -1,7 +1,7 @@
 import * as orderController from "./orders.services.js";
 
 //Get user order
-const getOrder = async() => {
+const getOrder = async(req, res) => {
     try {
         const result = await orderController.getOrders(req.user.id);
         return res.status(200).json(result);
@@ -13,7 +13,7 @@ const getOrder = async() => {
 }
 
 //Getr user order details
-const getOrderDetails = async() =>{
+const getOrderDetails = async(req, res) =>{
     try {
         const result = await orderController.getOrderDetails(req.params.id, req.user.id);
         return res.status(200).json(result);
@@ -23,7 +23,6 @@ const getOrderDetails = async() =>{
         });
     }
 }
-
 
 //create order
 const placeOrder = async(req, res) => {

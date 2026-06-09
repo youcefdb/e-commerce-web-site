@@ -6,8 +6,8 @@ import { updateUserSchema } from "./validation.users.js";
 const userRoot = express.Router();
 
 userRoot
-    .get("/profile", userController.viewProfile)
-    .patch("/update", schemaValidator(updateUserSchema), userController.updateUser)
+    .get("/profile/v1/", userController.viewProfile)
+    .patch("/update/v1/", schemaValidator(updateUserSchema), userController.updateUser)
 
 
 export default userRoot;

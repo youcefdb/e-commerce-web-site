@@ -6,8 +6,8 @@ import express from "express";
 const orderRoot = express.Router();
 
 orderRoot
-    .get("/", orderController.getOrder)
-    .get("/:id", schemaValidator(getOrderDetailsSchema), orderController.getOrderDetails)
-    .post("/", orderController.placeOrder)
+    .get("/v1/", orderController.getOrder)
+    .get("/:id/v1/", schemaValidator(getOrderDetailsSchema), orderController.getOrderDetails)
+    .post("/v1/", orderController.placeOrder)
 
 export default orderRoot;

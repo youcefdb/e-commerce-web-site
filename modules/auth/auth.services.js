@@ -36,11 +36,12 @@ const register = async (data) => {
 const login = async (data, device, ip) => {
     return withTransaction(async(client) => {
         const user = await authRepo.findUserByEmail(data.email, {db: client});
+
+        throwIfNotFound(user, "Invalid email or password");
+
         if (!user.password) {
             throw new AppError("This account uses Google Sign-In", 401);
         }
-
-        throwIfNotFound(user, "Invalid email or password");
 
         const validPw = await bcrypt.compare(data.password, user.password);
         if (!validPw) {

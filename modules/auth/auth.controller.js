@@ -11,8 +11,8 @@ const register = async(req, res) => {
         res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 30});
         return res.status(201).json(accessToken);
     } catch (error) {
-        return res.status(201).json({
-            message: "User created successfully"
+        return res.status(error.statusCode || 500).json({
+            message: error.message || "Internal Server Error"
         });
     }
 }
