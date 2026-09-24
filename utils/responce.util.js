@@ -9,8 +9,8 @@ const getPagination = (page = 1, limit = 10) => {
     const offset = (safePage - 1) * safeLimit
 
     return {
-        page: safePage,
-        limit: safeLimit,
+        safePage,
+        safeLimit,
         offset
     }
 }

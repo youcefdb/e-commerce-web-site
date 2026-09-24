@@ -1,7 +1,7 @@
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import withTransaction from "../../utils/transaction.util.js";
-import { findCartByUserId, getCartContent, removeProductFromCart } from "../cart/cart.repo.js";
-import {productQuantity, productStock, viewProduct} from "../products/product.repo.js";
+import {getCartContent, removeProductFromCart } from "../cart/cart.repo.js";
+import {productStock, viewProduct} from "../products/product.repo.js";
 import * as ordersRepo from "./orders.repo.js";
 
 //Get user order
@@ -27,14 +27,18 @@ const getOrderDetails = async(orderId, userId) => {
 //Create order
 const placeOrder = async (data, userId) => {
     return withTransaction(async (client) => {
-        
+        const productsList = data.products || data.items || [];
+        const resolvedProducts = {};
         var totalPrice = 0
 
-        for(const productPrice of data.products){
-            var realProduct = await viewProduct(productPrice.id, {db: client});
+        for (const productPrice of productsList) {
+            const productId = productPrice.id || productPrice.productId;
+            var realProduct = await viewProduct(productId, {db: client});
+            throwIfNotFound(realProduct, "Product not found");
             if (realProduct.stock >= productPrice.quantity) {
-                totalPrice += realProduct.price * productPrice.quantity;
-            }else{
+                totalPrice += parseFloat(realProduct.price) * productPrice.quantity;
+                resolvedProducts[productId] = realProduct;
+            } else {
                 throw AppError(`There are only ${realProduct.stock} of ${realProduct.name}(s)`, 409);
             }
         }
@@ -44,9 +48,9 @@ const placeOrder = async (data, userId) => {
                 userId,
                 totalPrice: totalPrice,
                 status: 'pending',
-                shippingAddress: data.shipping_address,
+                shippingAddress: data.shippingAddress || data.shipping_address,
                 paymentMethod: data.paymentMethod,
-                paidAt: data.paidAt,
+                paidAt: data.paidAt || new Date().toISOString(),
                 deliveredAt: null
             },
             { db: client }
@@ -56,7 +60,9 @@ const placeOrder = async (data, userId) => {
         const values = [];
 
         let paramIndex = 1;
-        for (const product of data.products) {
+        for (const product of productsList) {
+            const productId = product.id || product.productId;
+            const realProduct = resolvedProducts[productId];
 
             placeholders.push(
                 `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`
@@ -64,11 +70,20 @@ const placeOrder = async (data, userId) => {
             
             values.push(
                 order.id,
-                product.productId,
+                productId,
                 product.quantity,
-                product.price
+                realProduct.price
             );
             paramIndex += 4;
+
+            // Deduct stock in DB
+            await productStock(
+                {
+                    id: productId,
+                    stock: realProduct.stock - product.quantity
+                },
+                { db: client }
+            );
         }
 
         const items = await ordersRepo.addOrderItems(values,
@@ -76,6 +91,7 @@ const placeOrder = async (data, userId) => {
             { db: client }
         );
 
+        // Clear user cart content in DB
         await removeProductFromCart({userId}, {db: client});
 
         return {
@@ -100,12 +116,14 @@ const place = async (data, userId) => {
 
         for (const item of cartItems) {
             if (item.stock < item.quantity) {
-            throw AppError(`There are only ${item.stock} of ${item.name}(s)`, 409);
+            throw AppError(`There are only ${item.stock} of ${item.name}(s)`, 409
+            );
         }
 
             totalPrice += item.price * item.quantity;
         }
 
+        // Create order
         const order = await ordersRepo.placeOrder(
             {
                 userId,
@@ -166,9 +184,22 @@ const place = async (data, userId) => {
     });
 };
 
+//Update order status
+const updateOrderStatus = async(data, id, userId) => {
+    return withTransaction(async(client) => {
+        const newData = { status: data.status, id, userId };
+        const result = await ordersRepo.updateOrderStatus(newData, {db: client});
+        throwIfNotFound(result, "Order not found");
+
+        return{
+            message: "Status updated successfully"
+        }
+    });
+}
 
 export {
     getOrders,
     getOrderDetails,
-    placeOrder
+    placeOrder,
+    updateOrderStatus
 }

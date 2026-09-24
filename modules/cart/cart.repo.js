@@ -5,7 +5,7 @@ const addItemToCart = async (data, ctx) => {
     const query = `
         INSERT INTO cart_items(cart_id, product_id, quantity)
         VALUES($1, $2, $3)
-        RETURNING id, quantity
+        RETURNING id, cart_id, product_id, quantity
     `;
 
     const {rows} = await ctx.db.query(query, [data.cartId, data.productId, data.quantity]);
@@ -40,7 +40,7 @@ const findCartByUserId = async(id, ctx = {db: conn}) => {
 const getCartContent = async(data, ctx = {db: conn}) => {
     const query = `
         WITH products_items AS (
-            SELECT id, name, price, image
+            SELECT id, name, price, image, stock
             FROM products
         ),
 
@@ -52,6 +52,7 @@ const getCartContent = async(data, ctx = {db: conn}) => {
 
         SELECT
         pi.id AS product_id,
+        pi.id AS id,
         pi.name,
         pi.price,
         pi.stock,
@@ -82,11 +83,11 @@ const removeProductFromCart = async (data, ctx = {db: conn}) => {
 
     var values = [data.userId];
 
-    if (data.productId !== undefined) {
+    if (data.id !== undefined) {
         query += `
             AND ci.product_id = $2
         `;
-        values.push(data.productId);
+        values.push(data.id);
     }
 
     query += ` RETURNING ci.id, ci.cart_id;`;
@@ -108,10 +109,23 @@ const editProductQuantity = async(data, ctx) => {
         FROM user_cart uc
         WHERE uc.id = ci.cart_id
         AND ci.product_id = $3
-        RETURNING cart_id, product_id, quantity;
+        RETURNING ci.id, ci.cart_id, ci.product_id, ci.quantity;
     `;
 
-    const {rows} = await ctx.db.query(query, [data.userId, data.quantity, data.productId]);
+    const {rows} = await ctx.db.query(query, [data.userId, data.quantity, data.id]);
+    return rows[0];
+}
+
+//Looking for a product on the cart
+const findItemOnCart = async(data, ctx) => {
+    const query = `
+        SELECT c.id, ci.product_id, ci.quantity
+        FROM cart_items ci
+        JOIN carts c ON c.id = ci.cart_id
+        WHERE ci.product_id = $1 AND c.user_id = $2
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.productId, data.userId]);
     return rows[0];
 }
 
@@ -121,5 +135,6 @@ export {
     findCartByUserId,
     getCartContent,
     removeProductFromCart,
-    editProductQuantity
+    editProductQuantity,
+    findItemOnCart
 }

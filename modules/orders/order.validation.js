@@ -20,13 +20,20 @@ const placeOrderSchema = Joi.object({
   paidAt: Joi.date().allow(null),
   products: Joi.array().items(
       Joi.object({
-        productId: Joi.number().integer().positive().required(),
+        productId: Joi.string().trim().uuid().required(),
         quantity: Joi.number().integer().min(1).required()
       })
     ).min(1).required()
 }).unknown(false);
 
+
+const statuses = ['pending', 'delivered', 'cancelled'];
+const updateOrderStatusSchema = Joi.object({
+  id: Joi.string().trim().uuid().required(),
+  status: Joi.string().trim().lowercase().valid(...statuses).required()
+});
 export {
     getOrderDetailsSchema,
-    placeOrderSchema
+    placeOrderSchema,
+    updateOrderStatusSchema
 }

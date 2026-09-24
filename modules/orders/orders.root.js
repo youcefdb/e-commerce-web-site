@@ -1,13 +1,14 @@
 import schemaValidator from "../../middleware/schemaValidator.middleware.js";
 import * as orderController from "./orders.controller.js";
-import {getOrderDetailsSchema} from "./order.validation.js";
+import {getOrderDetailsSchema, placeOrderSchema, updateOrderStatusSchema} from "./order.validation.js";
 import express from "express";
 
 const orderRoot = express.Router();
 
 orderRoot
-    .get("/v1/", orderController.getOrder)
-    .get("/:id/v1/", schemaValidator(getOrderDetailsSchema), orderController.getOrderDetails)
-    .post("/v1/", orderController.placeOrder)
+    .get("/", orderController.getOrder)
+    .get("/:id/", schemaValidator(getOrderDetailsSchema), orderController.getOrderDetails)
+    .post("/", schemaValidator(placeOrderSchema), orderController.placeOrder)
+    .patch("/:id", schemaValidator(updateOrderStatusSchema), orderController.updateOrderStatus)
 
 export default orderRoot;

@@ -15,7 +15,7 @@ const viewProduct = async (id, ctx = {db: conn}) => {
 //Get products by filtring
 const getProducts = async (filter, limit, offset, ctx = {db: conn}) => {
     let query = `
-        SELECT p.name, p.description, p.price, p.rating, p.num_reviews
+        SELECT p.id, p.category_id, p.name, p.slug, p.description, p.price, p.stock, p.image, p.rating, p.num_reviews
         FROM products p
     `;
 

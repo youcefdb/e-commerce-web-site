@@ -3,7 +3,7 @@ import conn from "../../config/db.config.js";
 //Get all categories
 const getCategories = async (ctx = {db: conn}) => {
     const query = `
-        SELECT name, created_at
+        SELECT id, name, slug, description, image, created_at
         FROM categories
     `;
 

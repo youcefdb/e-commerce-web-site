@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import dotenv from "dotenv";
-import bcrypt from 'bcrypt';
 import crypto from "crypto";
 import { storeRefreshToken } from '../modules/auth/auth.repo.js';
 dotenv.config();
@@ -35,8 +34,9 @@ const generateRefreshToken = (user) => {
 
 //Generating token and store to database
 const generateAndStoreTokens = async (user, device, ip, client) => {
-    const accessToken = await generateAccessToken(user);
-    const refreshToken = await generateRefreshToken(user);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    const csrfToken = crypto.randomBytes(32).toString("base64url");
 
     const refreshTokenDecoded = jwt.decode(refreshToken);
     const tokenExpiredDate = new Date(refreshTokenDecoded.exp * 1000);
@@ -55,7 +55,8 @@ const generateAndStoreTokens = async (user, device, ip, client) => {
     );
     return {
         accessToken,
-        refreshToken
+        refreshToken,
+        csrfToken
     }
 }
 

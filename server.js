@@ -3,6 +3,9 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from 'cookie-parser';
 import verifyJwtToken from './middleware/jwtVerification.middleware.js';
+import roleAuthorize from "./middleware/roleCheck.middleware.js";
+import corsValidation from './middleware/corsValidation.middleware.js';
+import PERMISSION from "./config/roles.config.js";
 import authRoot from './modules/auth/auth.root.js';
 import userRoot from './modules/users/root.users.js';
 import productRoot from './modules/products/product.root.js';
@@ -15,32 +18,33 @@ import { apiLimiter, authLimiter } from './middleware/rateLimit.middleware.js';
 
 const app = express();
 
+//Allowed origin for accessing our server 
+app.use(corsValidation());
+
+//Allowed some origins to read JS thier responce
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.trim() : 'http://localhost:3000',
     credentials: true
 }))
 
-//add secure headers
+//Add secure headers
 app.use(helmet());
-//Middleware for reading cookie and set theme on request
+//Middleware for parsing cookie and set theme on request 
 app.use(cookieParser());
 //Middleware for parsing Json format into readable format (body)
 app.use(express.json());
 
 
-app.use("/auth", authLimiter, authRoot);
+app.use("/api/v1/auth", authLimiter, authRoot);
 app.use(apiLimiter);
-app.use("/products", productRoot);
-app.use("/categories", categoriesRoot);
-app.use("/reviews", reviewRoot);
+app.use("/api/v1/products", productRoot);
+app.use("/api/v1/categories", categoriesRoot);
+app.use("/api/v1/reviews", reviewRoot);
 
-
-app.use(verifyJwtToken);
-
-app.use("/users", userRoot);
-app.use("/carts", cartRoot);
-app.use("/whishLists", whiteListRoot);
-app.use("/orders", orderRoot);
-
+app.use(verifyJwtToken, roleAuthorize(PERMISSION.CUSTOMER, PERMISSION.ADMIN));
+app.use("/api/v1/users", userRoot);
+app.use("/api/v1/cart", cartRoot);
+app.use("/api/v1/whishLists", whiteListRoot);
+app.use("/api/v1/orders", orderRoot);
 
 export default app;

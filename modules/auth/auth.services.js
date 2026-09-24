@@ -11,7 +11,7 @@ import {AppError, throwIfNotFound} from '../../errors/errors.js';
 dotenv.config();
 
 //Sign in
-const register = async (data) => {
+const register = async (data, device, ip) => {
     return withTransaction(async(client) => {
         var user = await authRepo.findUserByEmail(data.email, {db: client});
         if (user) {
@@ -22,12 +22,18 @@ const register = async (data) => {
         const newData = {...data, password: hashPs};
         user = await authRepo.createUser(newData, {db: client});
         
-        const {accessToken, refreshToken} = await generateAndStoreTokens(user);
+        const {
+            accessToken,
+            refreshToken,
+            csrfToken
+        } = await generateAndStoreTokens(user, device, ip, client);
         
         return{
             message: "user created successfully",
             accessToken,
-            refreshToken
+            refreshToken,
+            csrfToken,
+            user
         };
     });
 }
@@ -40,7 +46,7 @@ const login = async (data, device, ip) => {
         throwIfNotFound(user, "Invalid email or password");
 
         if (!user.password) {
-            throw new AppError("This account uses Google Sign-In", 401);
+            throw AppError("This account uses Google Sign-In", 401);
         }
 
         const validPw = await bcrypt.compare(data.password, user.password);
@@ -52,7 +58,8 @@ const login = async (data, device, ip) => {
 
         return {
             accessToken,
-            refreshToken
+            refreshToken,
+            user
         }
     });
 }
@@ -96,7 +103,7 @@ const googleUserProfile = async (code) => {
         // console.log(tokenRes.data);
     } catch (error) {
         console.log(error.response?.data);
-    throw error;
+        throw error;
     }
 
     throwIfNotFound(tokenRes.data.access_token, "Google Access Token not found");

@@ -36,8 +36,21 @@ const placeOrder = async(req, res) => {
     }
 }
 
+//Update order status
+const updateOrderStatus = async (req, res) => {
+    try {
+        const result = await orderController.updateOrderStatus(req.body, req.params.id, req.user.id);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            message: error.message || "Internal Server Error"
+        });  
+    }
+}
+
 export {
     getOrder,
     getOrderDetails,
-    placeOrder
+    placeOrder,
+    updateOrderStatus
 }

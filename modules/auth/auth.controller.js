@@ -1,15 +1,41 @@
+import { AppError } from "../../errors/errors.js";
 import * as authServices from "./auth.services.js";
 
 //Create new account 
 const register = async(req, res) => {
     try {
-        const {accessToken, refreshToken} = await authServices.register(
+        const {
+            message,
+            accessToken,
+            refreshToken,
+            csrfToken, 
+            user
+        } = await authServices.register(
             req.body,
             req.headers["user-agent"],
             req.ip
         );
-        res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 30});
-        return res.status(201).json(accessToken);
+
+        res.cookie("jwt", refreshToken, {
+            httpOnly: true,
+            maxAge: 1000 * 60 * 60 * 24 * 30,
+            secure: true,
+            sameSite: "strict"
+        });
+
+        res.cookie("csrf-token", csrfToken, {
+            httpOnly: false,
+            secure: true,
+            sameSite: "strict"
+        });
+
+        return res.status(201).json({
+            message,
+            accessToken,
+            refreshToken,
+            user
+        });
+
     } catch (error) {
         return res.status(error.statusCode || 500).json({
             message: error.message || "Internal Server Error"
@@ -20,14 +46,23 @@ const register = async(req, res) => {
 //Login using system email
 const login = async(req, res) => {
     try {
-        const {accessToken, refreshToken} = await authServices.login(
+        const {accessToken, refreshToken, user} = await authServices.login(
             req.body, 
             req.headers["user-agent"], 
             req.ip
         );
-        res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 1000 * 60 * 60 * 24 * 30});
+        res.cookie("jwt", refreshToken, {
+            httpOnly: true,
+            maxAge: 1000 * 60 * 60 * 24 * 30,
+            secure: true,
+            sameSite: "strict"
+        });
 
-        return res.json(accessToken);
+        return res.json({
+            accessToken,
+            refreshToken,
+            user
+        });
     } catch (error) {
         return res.status(error.statusCode || 500).json({
             message: error.message || "Internal Server Error"
@@ -56,11 +91,11 @@ const buildGoogleAuthUrl = async(req, res) => {
 const googleLogin = async(req, res) => {
     try {
         if (!req.query.code) {
-            throw new AppError("Missing authorization code", 400);
+            throw AppError("Missing authorization code", 400);
         }
 
         if (req.query.state !== req.cookies.oauth_state) {
-            throw new AppError("Invalid OAuth state", 401);
+            throw AppError("Invalid OAuth state", 401);
         }
         res.clearCookie("oauth_state");
         const {accessToken, refreshToken} = await authServices.googleLogin(
@@ -72,7 +107,7 @@ const googleLogin = async(req, res) => {
         res.cookie("jwt", refreshToken, 
             {
                 httpOnly: true,
-                sameSite: "lax",
+                sameSite: "strict",
                 secure: process.env.NODE_ENV === "production",
                 maxAge: 1000 * 60 * 60 * 24 * 30
             });
@@ -90,8 +125,9 @@ const googleLogin = async(req, res) => {
 const refreshAccessToken = async(req, res) => {
     try {
 
+        const cookies = req.cookies?.jwt ? req.cookies : { jwt: req.body?.refreshToken };
         const {accessToken, refreshToken} = await authServices.refreshAccessToken(
-            req.cookies,
+            cookies,
             req.headers['user-agent'],
             req.ip
         )
@@ -99,7 +135,7 @@ const refreshAccessToken = async(req, res) => {
         res.cookie('jwt', refreshToken,
             {
                 httpOnly: true,
-                sameSite: "lax",
+                sameSite: "strict",
                 secure: false,
                 maxAge: 1000 * 60 * 60 * 24 * 30
             }
@@ -118,7 +154,9 @@ const refreshAccessToken = async(req, res) => {
 //Logout and delete refresh token from DB
 const logout = async(req, res) => {
     try {
-        await authServices.logout(req.cookies);
+        const cookies = req.cookies?.jwt ? req.cookies : { jwt: req.body?.refreshToken };
+        await authServices.logout(cookies);
+        res.clearCookie("jwt");
         return res.status(200).json({message: "Logged out successfully"});
     } catch (error) {
         return res.status(error.statusCode || 500).json({

@@ -1,4 +1,4 @@
-import * as categoriesRepo from "./categoires.repo.js";
+import * as categoriesRepo from "./categories.repo.js";
 
 //Get all categories
 const getCategories = async () => {

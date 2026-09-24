@@ -66,8 +66,11 @@ const viewProfile = async (userId) => {
     console.log(userId)
 
     const profile = {
+        id: data.id,
         name: data.name,
         email: data.email,
+        role: data.role,
+        avatar: data.avatar,
         created_at: data.created_at
     }
 

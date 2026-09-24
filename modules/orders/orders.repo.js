@@ -89,9 +89,23 @@ const addOrderItems = async (values, placeholders, ctx) => {
     return rows;
 };
 
+//Update status of order
+const updateOrderStatus = async (data, ctx) => {
+    const query = `
+        UPDATE orders
+        SET status = $1
+        WHERE id = $2 AND user_id = $3 
+        RETURNING id;
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.status, data.id, data.userId]);
+    return rows[0];
+}
+
 export{
     getOrders,
     getOrderDetails,
     placeOrder,
-    addOrderItems
+    addOrderItems,
+    updateOrderStatus
 };

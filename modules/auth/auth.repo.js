@@ -5,7 +5,7 @@ const createUser = async (data, ctx) => {
     const query = `
         INSERT INTO users(name, email, password, provider)
         VALUES($1, $2, $3, $4)
-        RETURNING *
+        RETURNING name, email, created_at, updated_at
     `;
     const {rows} = await ctx.db.query(query, [
         data.name,
@@ -39,7 +39,7 @@ const storeRefreshToken = async(data, ctx) => {
 //find user by email
 const findUserByEmail = async (email, ctx) => {
     const query = `
-        SELECT id, name, email, password, avatar, created_at, updated_at
+        SELECT id, name, email, password, role, provider, avatar, created_at, updated_at
         FROM users
         WHERE email = $1
     `;
@@ -51,7 +51,7 @@ const findUserByEmail = async (email, ctx) => {
 //find user by id
 const findUserById = async(id, ctx = {db: conn}) => {
     const query = `
-        SELECT id, name, email, password, avatar, created_at, updated_at
+        SELECT id, name, email, password, role, provider, avatar, created_at, updated_at
         FROM users
         WHERE id = $1
     `;
