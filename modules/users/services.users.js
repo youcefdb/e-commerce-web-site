@@ -2,7 +2,7 @@ import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import withTransaction from "../../utils/transaction.util.js";
 import { findUserByEmail, findUserById } from "../auth/auth.repo.js";
 import * as usersRepo from "../users/repo.users.js";
-import bcrypt from "bcrypt";
+import path from "path";
 
 //Update user profile
 const updateUser = (userId, data) => {
@@ -79,7 +79,28 @@ const viewProfile = async (userId) => {
     }
 }
 
+const uploadProfilePic = async(photo, userId) => {
+    return withTransaction(async(client) => {
+        
+        const data = {
+            userId,
+            photo: `upload/image/${photo.filename}`
+        }
+        const result = await usersRepo.updateProfilePic(data, {db: client});
+        throwIfNotFound(result, "User not found");
+
+        return {
+            message: "Image changed successfully",
+            data: {
+                id: result.id,
+                photoUrl: result.avatar
+            }
+        }
+    })
+}
+
 export {
     updateUser,
-    viewProfile
+    viewProfile,
+    uploadProfilePic
 }

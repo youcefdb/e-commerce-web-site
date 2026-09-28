@@ -13,6 +13,19 @@ const updateUser = async (params, values, id, ctx) => {
     return rows[0];
 }
 
+const updateProfilePic = async(data, ctx) => {
+    const query = `
+        UPDATE users
+        SET avatar = $2
+        WHERE id = $1
+        RETURNING id, avatar
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.userId, data.photo]);
+    return rows[0];
+}
+
 export {
-    updateUser
+    updateUser,
+    updateProfilePic
 }

@@ -124,7 +124,6 @@ const googleLogin = async(req, res) => {
 //Refresh access token
 const refreshAccessToken = async(req, res) => {
     try {
-
         const cookies = req.cookies?.jwt ? req.cookies : { jwt: req.body?.refreshToken };
         const {accessToken, refreshToken} = await authServices.refreshAccessToken(
             cookies,

@@ -15,11 +15,13 @@ import reviewRoot from './modules/reviews/reviews.root.js';
 import whiteListRoot from './modules/wishlist/wishlist.root.js';
 import orderRoot from './modules/orders/orders.root.js';
 import { apiLimiter, authLimiter } from './middleware/rateLimit.middleware.js';
+import path from 'path';
 
 const app = express();
 
 //Allowed origin for accessing our server 
 app.use(corsValidation());
+app.use("/upload", express.static(path.join(process.cwd()), "upload"))
 
 //Allowed some origins to read JS thier responce
 app.use(cors({
