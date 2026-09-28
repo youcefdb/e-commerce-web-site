@@ -1,8 +1,9 @@
+import path from "path";
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import withTransaction from "../../utils/transaction.util.js";
 import { findUserByEmail, findUserById } from "../auth/auth.repo.js";
 import * as usersRepo from "../users/repo.users.js";
-import path from "path";
+import fs from "fs/promises";
 
 //Update user profile
 const updateUser = (userId, data) => {
@@ -80,23 +81,32 @@ const viewProfile = async (userId) => {
 }
 
 const uploadProfilePic = async(photo, userId) => {
-    return withTransaction(async(client) => {
-        
+    const user = await findUserById(userId);
+        throwIfNotFound(user, "User not found");
+
+        let oldPhoto = null;
+
+        if (user.avatar) {
+            oldPhoto = path.join(process.cwd(), user.avatar);
+        }
+
         const data = {
             userId,
             photo: `upload/image/${photo.filename}`
         }
-        const result = await usersRepo.updateProfilePic(data, {db: client});
-        throwIfNotFound(result, "User not found");
+        const newPhoto = await usersRepo.updateProfilePic(data);
+        throwIfNotFound(newPhoto, "User not found");
+        if (oldPhoto) {
+            await fs.unlink(oldPhoto);
+        }
 
         return {
             message: "Image changed successfully",
             data: {
-                id: result.id,
-                photoUrl: result.avatar
+                id: newPhoto.id,
+                newPhoto: newPhoto.avatar
             }
         }
-    })
 }
 
 export {

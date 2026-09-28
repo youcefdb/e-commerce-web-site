@@ -21,7 +21,7 @@ const app = express();
 
 //Allowed origin for accessing our server 
 app.use(corsValidation());
-app.use("/upload", express.static(path.join(process.cwd()), "upload"))
+app.use("/upload", express.static(path.join(process.cwd(), "upload")))
 
 //Allowed some origins to read JS thier responce
 app.use(cors({

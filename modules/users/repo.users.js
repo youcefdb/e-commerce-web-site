@@ -13,7 +13,8 @@ const updateUser = async (params, values, id, ctx) => {
     return rows[0];
 }
 
-const updateProfilePic = async(data, ctx) => {
+//Update user photo
+const updateProfilePic = async(data, ctx = {db: conn}) => {
     const query = `
         UPDATE users
         SET avatar = $2
@@ -24,7 +25,6 @@ const updateProfilePic = async(data, ctx) => {
     const {rows} = await ctx.db.query(query, [data.userId, data.photo]);
     return rows[0];
 }
-
 export {
     updateUser,
     updateProfilePic
