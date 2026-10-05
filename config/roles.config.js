@@ -1,4 +1,6 @@
-export default PERMISSION = {
+const PERMISSION = {
     ADMIN: "admin",
     CUSTOMER: "customer"
 }
+
+export default PERMISSION;

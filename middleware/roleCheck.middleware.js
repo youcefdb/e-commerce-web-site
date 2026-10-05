@@ -1,4 +1,4 @@
- export default roleAuthorize = (...currentRole) => {
+const roleAuthorize = (...currentRole) => {
     return (req, res, next) => {
         if (!req?.user?.role) {
             return res.sendStatus(401);
@@ -14,3 +14,5 @@
         next();
     }
 }
+
+export default roleAuthorize;

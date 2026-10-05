@@ -1,10 +1,10 @@
 import { AppError } from "../../errors/errors.js";
+import asyncHandler from "../../middleware/tryCatch.middleware.js";
 import * as authServices from "./auth.services.js";
 
 //Create new account 
-const register = async(req, res) => {
-    try {
-        const {
+const register = asyncHandler(async(req, res) =>{
+    const {
             message,
             accessToken,
             refreshToken,
@@ -35,17 +35,9 @@ const register = async(req, res) => {
             refreshToken,
             user
         });
+});
 
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
-
-//Login using system email
-const login = async(req, res) => {
-    try {
+const login = asyncHandler(async(req, res) =>{
         const {accessToken, refreshToken, user} = await authServices.login(
             req.body, 
             req.headers["user-agent"], 
@@ -63,16 +55,10 @@ const login = async(req, res) => {
             refreshToken,
             user
         });
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+})
 
 //Build google URL for login
-const buildGoogleAuthUrl = async(req, res) => {
-    try {
+const buildGoogleAuthUrl = asyncHandler(async(req, res) => {
         const {url, state} = await authServices.buildGoogleAuthUrl();
         res.cookie("oauth_state", state, {
             httpOnly: true,
@@ -80,16 +66,10 @@ const buildGoogleAuthUrl = async(req, res) => {
             secure: process.env.NODE_ENV === "production"
         });
         res.redirect(url);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+});
 
 //Login via google account
-const googleLogin = async(req, res) => {
-    try {
+const googleLogin = asyncHandler(async(req, res) => {
         if (!req.query.code) {
             throw AppError("Missing authorization code", 400);
         }
@@ -114,16 +94,10 @@ const googleLogin = async(req, res) => {
         return res.status(200).json({
             accessToken: accessToken
         })
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+})
 
 //Refresh access token
-const refreshAccessToken = async(req, res) => {
-    try {
+const refreshAccessToken = asyncHandler(async (req, res) => {
         const cookies = req.cookies?.jwt ? req.cookies : { jwt: req.body?.refreshToken };
         const {accessToken, refreshToken} = await authServices.refreshAccessToken(
             cookies,
@@ -142,27 +116,16 @@ const refreshAccessToken = async(req, res) => {
 
         return res.status(200).json({
             accessToken: accessToken
-        })
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
         });
-    }
-}
+})
 
 //Logout and delete refresh token from DB
-const logout = async(req, res) => {
-    try {
-        const cookies = req.cookies?.jwt ? req.cookies : { jwt: req.body?.refreshToken };
-        await authServices.logout(cookies);
-        res.clearCookie("jwt");
-        return res.status(200).json({message: "Logged out successfully"});
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+const logout = asyncHandler(async(req, res) => {
+    const cookies = req.cookies?.jwt ? req.cookies : { jwt: req.body?.refreshToken };
+    await authServices.logout(cookies);
+    res.clearCookie("jwt");
+    return res.status(200).json({message: "Logged out successfully"});
+});
 
 export{
     register,

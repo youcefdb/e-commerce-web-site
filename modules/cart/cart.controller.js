@@ -1,52 +1,29 @@
+import asyncHandler from "../../middleware/tryCatch.middleware.js";
 import * as cartServices from "./cart.services.js";
 
 //add product to cart
-const addProductToCart = async (req, res) => {
-    try {
-        const result = await cartServices.addProductToCart(req.body, req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        res.status(error.statusCode || 500).json({
-            message: error.message
-        });
-    };
-}
+const addProductToCart = asyncHandler(async(req, res) => {
+    const result = await cartServices.addProductToCart(req.body, req.user.id);
+    return res.status(200).json(result);
+})
 
 //get cart content
-const getCartContent = async(req, res) => {
-    try {
-        const result = await cartServices.getCartContent(req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        res.status(error.statusCode || 500).json({
-            message: error.message
-        });
-    };
-}
+const getCartContent = asyncHandler(async(req, res) => {
+    const result = await cartServices.getCartContent(req.user.id);
+    return res.status(200).json(result);
+})
 
 //Remove product from cart
-const removeProductFromCart = async(req, res) => {
-    try {
-        const result = await cartServices.removeProductFromCart(req.params.id, req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        res.status(error.statusCode || 500).json({
-            message: error.message
-        });
-    }
-}
+const removeProductFromCart = asyncHandler(async(req, res) => {
+    const result = await cartServices.removeProductFromCart(req.params.id, req.user.id);
+    return res.status(200).json(result);
+})
 
 //increment or decrement product quantity
-const editProductQuantity = async(req, res) => {
-    try {
-        const result = await cartServices.editProductQuantity({id: req.params.id, quantity: req.body.quantity}, req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-       res.status(error.statusCode || 500).json({
-            message: error.message
-        }); 
-    }
-}
+const editProductQuantity = asyncHandler(async(req, res) =>{
+    const result = await cartServices.editProductQuantity({id: req.params.id, quantity: req.body.quantity}, req.user.id);
+    return res.status(200).json(result);
+})
 
 export {
     addProductToCart,

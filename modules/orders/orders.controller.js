@@ -1,52 +1,29 @@
+import asyncHandler from "../../middleware/tryCatch.middleware.js";
 import * as orderController from "./orders.services.js";
 
 //Get user order
-const getOrder = async(req, res) => {
-    try {
-        const result = await orderController.getOrders(req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+const getOrder = asyncHandler(async(req, res) => {
+    const result = await orderController.getOrders(req.user.id);
+    return res.status(200).json(result);
+})
 
 //Getr user order details
-const getOrderDetails = async(req, res) =>{
-    try {
-        const result = await orderController.getOrderDetails(req.params.id, req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+const getOrderDetails = asyncHandler(async(req, res) => {
+    const result = await orderController.getOrderDetails(req.params.id, req.user.id);
+    return res.status(200).json(result);
+})
 
 //create order
-const placeOrder = async(req, res) => {
-    try {
-        const result = await orderController.placeOrder(req.body, req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+const placeOrder = asyncHandler(async(req, res) => {
+    const result = await orderController.placeOrder(req.body, req.user.id);
+    return res.status(200).json(result);
+});
 
 //Update order status
-const updateOrderStatus = async (req, res) => {
-    try {
-        const result = await orderController.updateOrderStatus(req.body, req.params.id, req.user.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });  
-    }
-}
+const updateOrderStatus = asyncHandler(async(req, res) => {
+    const result = await orderController.updateOrderStatus(req.body, req.params.id, req.user.id);
+    return res.status(200).json(result);
+});
 
 export {
     getOrder,

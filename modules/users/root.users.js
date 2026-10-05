@@ -7,8 +7,9 @@ import { updateUserSchema } from "./validation.users.js";
 const userRoot = express.Router();
 
 userRoot
-    .post("/image", upload.single("image"), userController.uploadProfilePic)
     .get("/me", userController.viewProfile)
     .patch("/me", schemaValidator(updateUserSchema), userController.updateUser)
+    .post("/image", upload.single("image"), userController.uploadProfilePic)
+    .delete("/me", userController.removePhoto)
 
 export default userRoot;

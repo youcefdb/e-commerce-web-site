@@ -1,8 +1,8 @@
+import asyncHandler from "../../middleware/tryCatch.middleware.js";
 import * as productServers from "./product.services.js";
 
 //Get products with filtring 
-const getProducts = async (req, res) => {
-    try {
+const getProducts = asyncHandler(async(req, res) => {
         var filter = {};
 
         if (req.query.search != undefined) {
@@ -37,25 +37,13 @@ const getProducts = async (req, res) => {
 
         const result = await productServers.getProducts(filter, req.query.page, req.query.limit);
         return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        });
-    }
-}
+})
 
 //Get product details
-const viewProduct = async(req, res) => {
-    try {
-        const result = await productServers.viewProduct(req.params.id);
-        return res.status(200).json(result);
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            message: error.message || "Internal Server Error"
-        }); 
-    }
-}
-
+const viewProduct = asyncHandler(async (req, res) => {
+    const result = await productServers.viewProduct(req.params.id);
+    return res.status(200).json(result);
+})
 
 export{
     getProducts,

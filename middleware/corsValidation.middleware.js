@@ -1,8 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-//Allowed origins 
-
+//Allowed origins
 const corsValidation = (req, res, next) => {
     const origines = process.env.ALLOWED_ORIGINS.split(",").map(or => or.trim()).filter(Boolean);
 

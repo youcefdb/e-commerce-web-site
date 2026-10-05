@@ -8,7 +8,7 @@ import roleCheckMiddleware from "../../middleware/roleCheck.middleware.js";
 const productRoot = express.Router();
 
 productRoot
-    .get("/", roleCheckMiddleware(PERMISSION.admin, PERMISSION.customer), schemaValidator(getProductsSchema), productController.getProducts)
-    .get("/:id/", roleCheckMiddleware(PERMISSION.admin, PERMISSION.customer), schemaValidator(productDetailsSchema), productController.viewProduct)
+    .get("/", roleCheckMiddleware(PERMISSION.ADMIN, PERMISSION.CUSTOMER), schemaValidator(getProductsSchema), productController.getProducts)
+    .get("/:id/", roleCheckMiddleware(PERMISSION.ADMIN, PERMISSION.CUSTOMER), schemaValidator(productDetailsSchema), productController.viewProduct)
 
 export default productRoot;

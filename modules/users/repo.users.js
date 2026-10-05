@@ -25,7 +25,20 @@ const updateProfilePic = async(data, ctx = {db: conn}) => {
     const {rows} = await ctx.db.query(query, [data.userId, data.photo]);
     return rows[0];
 }
+
+//remove user profile photo
+const removePhoto = async(data, ctx = {db: conn}) => {
+    const query = `
+        DELETE FROM users
+        WHERE id = $1
+        RETURNING id, email, avatar, created_at;
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.id]);
+    return rows[0];
+}
 export {
     updateUser,
-    updateProfilePic
+    updateProfilePic,
+    removePhoto
 }

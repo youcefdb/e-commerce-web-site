@@ -4,6 +4,7 @@ import withTransaction from "../../utils/transaction.util.js";
 import { findUserByEmail, findUserById } from "../auth/auth.repo.js";
 import * as usersRepo from "../users/repo.users.js";
 import fs from "fs/promises";
+import sharp from "sharp";
 
 //Update user profile
 const updateUser = (userId, data) => {
@@ -80,24 +81,48 @@ const viewProfile = async (userId) => {
     }
 }
 
-const uploadProfilePic = async(photo, userId) => {
+//upload or update photo
+const uploadProfilePic = async (photo, userId) => {
     const user = await findUserById(userId);
-        throwIfNotFound(user, "User not found");
+    throwIfNotFound(user, "User not found");
 
-        let oldPhoto = null;
+    //validate image
+    const photoBuffer = await processPhoto(photo);
 
-        if (user.avatar) {
-            oldPhoto = path.join(process.cwd(), user.avatar);
-        }
+    const fileName = `${crypto.randomUUID()}.webp`; //new file name
+    const uploadDir = path.join(process.cwd(), "upload", "image"); //Current path
+    const absolutePath = path.join(uploadDir, fileName); //Image complete path
+    const relativePath = path.join("upload", "image", fileName); //Image current path
 
-        const data = {
-            userId,
-            photo: `upload/image/${photo.filename}`
-        }
-        const newPhoto = await usersRepo.updateProfilePic(data);
-        throwIfNotFound(newPhoto, "User not found");
+    let oldPhoto = null;
+
+    if (user.avatar) {
+        oldPhoto = path.join(process.cwd(), user.avatar);
+    }
+
+    //save new image
+    try {
+        await fs.writeFile(absolutePath, photoBuffer);
+    } catch (error) {
+        throw AppError("Failed to save image", 500);
+    }
+
+    try {
+        //update DB transactionally
+        const newPhoto = await withTransaction(async (client) => {
+            const data = {
+                userId,
+                photo: relativePath
+            };
+
+            const result = await usersRepo.updateProfilePic(data, {db: client});
+            throwIfNotFound(result, "User not found");
+            return result;
+        });
+
+        //delete old image AFTER DB commit
         if (oldPhoto) {
-            await fs.unlink(oldPhoto);
+            await fs.unlink(oldPhoto).catch(() => {});
         }
 
         return {
@@ -106,11 +131,51 @@ const uploadProfilePic = async(photo, userId) => {
                 id: newPhoto.id,
                 newPhoto: newPhoto.avatar
             }
-        }
+        };
+
+    } catch (error) {
+        //DB transaction rolled back
+        //remove the new orphaned image
+        await fs.unlink(absolutePath).catch(() => {});
+
+        throw error;
+    }
+};
+
+// Decode, resize, and re-encode as WebP
+const processPhoto = async(photo) => {
+    try {
+        //Decoding and re-decoding(removing unnecessary metadata)
+        const output = await sharp(photo.buffer)
+            .resize({
+                withoutEnlargement: true, //If the photo is small let it as it is
+                width: 800 //otherwise 800pxl
+            })
+            .webp({quality: 80}) //Change it to webp with 80
+            .toBuffer(); //The output should be in bianry(nodejs buffer)
+
+        return output;
+    } catch (error) {
+        throw AppError("Invalid Photo", 400);
+    }
+}
+
+//Remove profile picture
+const removePhoto = async(userId) => {
+    const result = await usersRepo.removePhoto(userId);
+    throwIfNotFound(result, "Fiald to delete the photo");
+
+    const absolutePath = path.join(process.cwd(), result.avatar);
+    await fs.unlink(absolutePath).catch(() => {});
+
+    return {
+        message: "Profile Picture removed successfully"
+    }
 }
 
 export {
     updateUser,
     viewProfile,
-    uploadProfilePic
+    uploadProfilePic,
+    removePhoto
 }
