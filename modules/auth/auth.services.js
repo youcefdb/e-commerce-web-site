@@ -19,8 +19,19 @@ const register = async (data, device, ip) => {
         }
         
         const hashPs = await bcrypt.hash(data.password, 10);
-        const newData = {...data, password: hashPs};
-        user = await authRepo.createUser(newData, {db: client});
+
+        //Handle create account with the same email in the same time
+        try {
+            const newData = {...data, password: hashPs};
+            user = await authRepo.createUser(newData, {db: client});
+        } catch (error) {
+            console.log(error);
+
+            if (error.statusCode === "23505") {
+                throw AppError("An account with this email may already exist. Try logging in or resetting your password", 409);
+            }
+            throw error;
+        }
         
         const {
             accessToken,
@@ -160,7 +171,7 @@ const refreshAccessToken = async (cookies, device, ip) => {
 
         const oldRefreshToken = cookies.jwt;
 
-        const decode = await jwt.verify(
+        const decode = jwt.verify(
             oldRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
         )
@@ -174,7 +185,7 @@ const refreshAccessToken = async (cookies, device, ip) => {
         throwIfNotFound(user, "Unauthorized");
 
         const hashedRefreshToken = crypto.createHash("sha256").update(oldRefreshToken).digest("hex");
-        const validation = await authRepo.findRefreshToken(hashedRefreshToken, {db: client});
+        const validation = await authRepo.findRefreshToken({token: hashedRefreshToken, userId}, {db: client});
         
         //Handle Reuse token Attack
         if (!validation) {

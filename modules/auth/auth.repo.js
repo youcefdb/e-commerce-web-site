@@ -5,7 +5,7 @@ const createUser = async (data, ctx) => {
     const query = `
         INSERT INTO users(name, email, password, provider)
         VALUES($1, $2, $3, $4)
-        RETURNING name, email, created_at, updated_at
+        RETURNING id, name, role, email, created_at, updated_at
     `;
     const {rows} = await ctx.db.query(query, [
         data.name,
@@ -61,14 +61,15 @@ const findUserById = async(id, ctx = {db: conn}) => {
 }
 
 //find user by id
-const findRefreshToken = async (token, ctx) => {
+const findRefreshToken = async (data, ctx) => {
     const query = `
         SELECT id, token, expires_at, created_at
         FROM refresh_tokens
-        WHERE token = $1
+        WHERE token = $1 AND user_id = $2
+        FOR UPDATE
     `;
 
-    const {rows} = await ctx.db.query(query, [token]);
+    const {rows} = await ctx.db.query(query, [data.token, data.userId]);
     return rows[0];
 }
 

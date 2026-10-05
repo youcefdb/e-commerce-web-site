@@ -1,4 +1,4 @@
-import asyncHandler from "../../middleware/tryCatch.middleware.js";
+import asyncHandler from "../../utils/tryCatch.util.js";
 import * as userServices from "../users/services.users.js";
 
 //Update user profile

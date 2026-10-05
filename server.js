@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from "cors";
 import helmet from "helmet";
+import path from 'path';
 import cookieParser from 'cookie-parser';
 import verifyJwtToken from './middleware/jwtVerification.middleware.js';
 import roleAuthorize from "./middleware/roleCheck.middleware.js";
@@ -15,11 +16,11 @@ import reviewRoot from './modules/reviews/reviews.root.js';
 import whiteListRoot from './modules/wishlist/wishlist.root.js';
 import orderRoot from './modules/orders/orders.root.js';
 import { apiLimiter, authLimiter } from './middleware/rateLimit.middleware.js';
-import path from 'path';
+import globalMiddelware from './middleware/gobalMiddelware.middleware.js';
 
 const app = express();
 
-//Allowed origin for accessing our server 
+//Allowed origin for accessing our server
 app.use(corsValidation);
 
 app.use("/upload", express.static(path.join(process.cwd(), "upload")))
@@ -49,5 +50,8 @@ app.use("/api/v1/users", userRoot);
 app.use("/api/v1/cart", cartRoot);
 app.use("/api/v1/whishLists", whiteListRoot);
 app.use("/api/v1/orders", orderRoot);
+
+//Global err middleware for catching erros
+app.use(globalMiddelware);
 
 export default app;

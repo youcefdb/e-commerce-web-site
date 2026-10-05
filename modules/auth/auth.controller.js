@@ -1,5 +1,5 @@
 import { AppError } from "../../errors/errors.js";
-import asyncHandler from "../../middleware/tryCatch.middleware.js";
+import asyncHandler from "../../utils/tryCatch.util.js";
 import * as authServices from "./auth.services.js";
 
 //Create new account 
@@ -32,7 +32,6 @@ const register = asyncHandler(async(req, res) =>{
         return res.status(201).json({
             message,
             accessToken,
-            refreshToken,
             user
         });
 });
@@ -52,14 +51,13 @@ const login = asyncHandler(async(req, res) =>{
 
         return res.json({
             accessToken,
-            refreshToken,
             user
         });
 })
 
 //Build google URL for login
-const buildGoogleAuthUrl = asyncHandler(async(req, res) => {
-        const {url, state} = await authServices.buildGoogleAuthUrl();
+const buildGoogleAuthUrl = asyncHandler((req, res) => {
+        const {url, state} = authServices.buildGoogleAuthUrl();
         res.cookie("oauth_state", state, {
             httpOnly: true,
             sameSite: "lax",

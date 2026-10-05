@@ -1,18 +1,17 @@
-const roleAuthorize = (...currentRole) => {
+import { AppError } from "../errors/errors";
+
+const roleAuthorize = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req?.user?.role) {
-            return res.sendStatus(401);
+            return next(AppError("Unauthorized", 401));
         }
 
-        const allowedRoles = [...currentRole];
-
-        const result = req.user.role.map(ro => allowedRoles.includes(ro)).find(one => one === true);
-        if (!result) {
-            return res.sendStatus(401);
+        if (!allowedRoles.includes(req.user.role)) {
+            return next(AppError("Forbidden", 403));
         }
 
         next();
-    }
-}
+    };
+};
 
 export default roleAuthorize;

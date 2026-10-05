@@ -29,9 +29,6 @@ const addTowishlist = async(data, userId) => {
             const newData = {wishListId: wishlist.id, productId: data.productId};
             var result = await wishListRepo.addToWishlist(newData, {db: client});
         } catch (error) {
-            if (error.code === "23505") {
-                throw AppError("Product already exist", 409);
-            }
             throw error;
         }
         return {
