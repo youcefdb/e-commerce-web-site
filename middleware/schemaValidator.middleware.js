@@ -17,7 +17,7 @@ const schemaValidator = (schema) => {
         });
     }
 
-        req.validatedData = value;
+        // req.validatedData = value;
 
         next();
     }

@@ -3,7 +3,7 @@ import Joi from "joi";
 //Schema for adding product to cart
 const addProductToCartSchema = Joi.object({
     productId: Joi.string().trim().uuid().required(),
-    quantity: Joi.number().integer().max(10).required(),
+    quantity: Joi.number().integer().max(10).min(0).required(),
 }).unknown(false);
 
 //Remove product from cart schema

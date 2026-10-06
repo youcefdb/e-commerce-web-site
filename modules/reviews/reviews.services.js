@@ -6,9 +6,9 @@ import * as reviewsRepo from "./reviews.repo.js";
 
 //get product reviews
 const getReviews = async(productId, page, limit) => {
-    const result = await reviewsRepo.getReviews(productId);
-    throwIfNotFound(result, "Be the first to review this product!");
     const {safePage, safeLimit, offset} = getPagination(page, limit);
+    const result = await reviewsRepo.getReviews({productId, limit: safeLimit, offset});
+    throwIfNotFound(result, "Be the first to review this product!");
     return buildResponce(result, safePage, offset);
 }
 

@@ -5,13 +5,14 @@ import { findUserByEmail, findUserById } from "../auth/auth.repo.js";
 import * as usersRepo from "../users/repo.users.js";
 import fs from "fs/promises";
 import sharp from "sharp";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 //Update user profile
 const updateUser = (userId, data) => {
     return withTransaction(async(client) => {
         const {name, email, password} = data;
         const user = await findUserById(userId, {db: client});
-
 
         let params = [];
         let values = [];
@@ -162,7 +163,7 @@ const processPhoto = async(photo) => {
 
 //Remove profile picture
 const removePhoto = async(userId) => {
-    const result = await usersRepo.removePhoto(userId);
+    const result = await usersRepo.removePhoto({id: userId});
     throwIfNotFound(result, "Fiald to delete the photo");
 
     const absolutePath = path.join(process.cwd(), result.avatar);

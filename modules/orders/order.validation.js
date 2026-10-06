@@ -6,8 +6,6 @@ const getOrderDetailsSchema = Joi.object({
 }).unknown(false);
 
 const placeOrderSchema = Joi.object({
-  status: Joi.string().trim().lowercase().valid('pending', 'delivered', 'cancelled').required(),
-
   shipping_address: Joi.object({
     fullName: Joi.string().trim().required(),
     country: Joi.string().trim().required(),
@@ -18,12 +16,16 @@ const placeOrderSchema = Joi.object({
 
   paymentMethod: Joi.string().trim().required(),
   paidAt: Joi.date().allow(null),
-  products: Joi.array().items(
-      Joi.object({
-        productId: Joi.string().trim().uuid().required(),
-        quantity: Joi.number().integer().min(1).required()
-      })
-    ).min(1).required()
+
+  product: Joi.object({
+    productId: Joi.uuid().trim().required(),
+    quantity: Joi.number().integer().positive().max(10)
+  }),
+
+  products: Joi.object({
+    items: Joi.array().items(product).unique("productId").required()
+  })
+
 }).unknown(false);
 
 

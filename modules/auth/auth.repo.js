@@ -61,7 +61,7 @@ const findUserById = async(id, ctx = {db: conn}) => {
 }
 
 //find user by id
-const findRefreshToken = async (data, ctx) => {
+const findRefreshToken = async (data, ctx = {db: conn}) => {
     const query = `
         SELECT id, token, expires_at, created_at
         FROM refresh_tokens
@@ -85,7 +85,7 @@ const deleteRefreshToken = async(token, ctx) =>{
 }
 
 //Delete all refresh token for spesific user
-const logoutAllSession = async(userId, ctx) => {
+const logoutAllSession = async(userId, ctx = {db: conn}) => {
     const query = `
         DELETE FROM refresh_tokens
         WHERE user_id = $1

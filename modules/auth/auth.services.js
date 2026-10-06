@@ -77,7 +77,7 @@ const login = async (data, device, ip) => {
 
 //Build google URL
 const buildGoogleAuthUrl = () => {
-    const redirectUri = 'http://localhost:3500/auth/google/callback';
+    const redirectUri = process.env.REDIRECT_URI;
     const clientId = process.env.CLIENT_ID;
     const state = crypto.randomUUID();
     
@@ -101,13 +101,12 @@ const buildGoogleAuthUrl = () => {
 
 //Get user google profile
 const googleUserProfile = async (code) => {
-    const redirectUri = 'http://localhost:3500/auth/google/callback';
     try {
             var tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
             client_id: process.env.CLIENT_ID,
             client_secret: process.env.CLIENT_SECRET,
             code,
-            redirect_uri: redirectUri,
+            redirect_uri: process.env.REDIRECT_URI,
             grant_type: 'authorization_code'
         });
 
@@ -150,8 +149,6 @@ const googleLogin = async (code, device, ip) => {
 
         const {accessToken, refreshToken} = await generateAndStoreTokens(user, device, ip, client);
 
-        console.log(accessToken);
-
         return {
             accessToken,
             refreshToken
@@ -161,41 +158,49 @@ const googleLogin = async (code, device, ip) => {
 
 //Refresh access token
 const refreshAccessToken = async (cookies, device, ip) => {
-    return withTransaction(async(client) => {
+    if (!cookies?.jwt) {
+        throw AppError("Unauthorized", 401);
+    }
 
-        if (!cookies?.jwt) {
-            throw AppError("Unauthorized", 401);
-        }
-
-        console.log(cookies.jwt)
-
-        const oldRefreshToken = cookies.jwt;
-
-        const decode = jwt.verify(
+    const oldRefreshToken = cookies.jwt;
+    let decode;
+    try {
+        decode = jwt.verify(
             oldRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
         )
+    } catch (error) {
+        throw AppError("Unauthorized", 401);
+    }
 
-        if (!decode) {
-            throw AppError("Unauthorized", 401);
-        }
-        const userId = decode.userInfo.id;
+    const userId = decode.userInfo.id;
+    let validation;
 
+    const hashedRefreshToken = crypto.createHash("sha256").update(oldRefreshToken).digest("hex");
+
+    const result = withTransaction((async()=>{
         const user = await authRepo.findUserById(userId, {db: client});
         throwIfNotFound(user, "Unauthorized");
 
-        const hashedRefreshToken = crypto.createHash("sha256").update(oldRefreshToken).digest("hex");
-        const validation = await authRepo.findRefreshToken({token: hashedRefreshToken, userId}, {db: client});
-        
-        //Handle Reuse token Attack
-        if (!validation) {
-            await authRepo.logoutAllSession(userId, {db: client});
-            throw AppError("Unauthorized", 401);
-        }
-
+        validation = await authRepo.findRefreshToken({token: hashedRefreshToken, userId}, {db: client});
         const newUser = {id: user.id, role: user.role, hashedRefreshToken: hashedRefreshToken};
-        return await replaceRefreshToken(newUser, device, ip, client);
-    });
+        const tokens = await replaceRefreshToken(newUser, device, ip, client);
+        
+        if (!validation) {
+            return {
+                reuse: false,
+                tokens
+            }
+        }
+    }));
+
+    //Handle Reuse token Attack
+    if (!result.reuse) {
+        await authRepo.logoutAllSession(userId, {db: client});
+        throw AppError("Unauthorized", 401);
+    }    
+
+    return result.tokens;
 }
 
 //Logout and delete refresh token from DB

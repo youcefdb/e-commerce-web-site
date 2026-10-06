@@ -85,8 +85,9 @@ const getProducts = async (filter, limit, offset, ctx = {db: conn}) => {
 const productStock = async (data, ctx) => {
     const query = `
         UPDATE products
-        SET stock = $1 
+        SET stock = stock - $1 
         WHERE id = $2
+            AND stock >= $1
         RETURNING id
     `;
 

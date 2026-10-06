@@ -1,6 +1,6 @@
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import withTransaction from "../../utils/transaction.util.js";
-import {getCartContent, removeProductFromCart } from "../cart/cart.repo.js";
+import {deleteFromCarts, getCartContent, removeProductFromCart } from "../cart/cart.repo.js";
 import {productStock, viewProduct} from "../products/product.repo.js";
 import * as ordersRepo from "./orders.repo.js";
 
@@ -27,7 +27,7 @@ const getOrderDetails = async(orderId, userId) => {
 //Create order
 const placeOrder = async (data, userId) => {
     return withTransaction(async (client) => {
-        const productsList = data.products || data.items || [];
+        const productsList = data.products.items || data.product || [];
         const resolvedProducts = {};
         var totalPrice = 0
 
@@ -58,8 +58,13 @@ const placeOrder = async (data, userId) => {
 
         const placeholders = [];
         const values = [];
-
         let paramIndex = 1;
+
+
+        const deletePlaceHolder = [];
+        const deleteValues = [];
+        let deleteParamIndex = 1;
+
         for (const product of productsList) {
             const productId = product.id || product.productId;
             const realProduct = resolvedProducts[productId];
@@ -67,6 +72,10 @@ const placeOrder = async (data, userId) => {
             placeholders.push(
                 `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`
             );
+
+            deletePlaceHolder.push(
+                `$${deleteParamIndex++}`
+            )
             
             values.push(
                 order.id,
@@ -76,14 +85,18 @@ const placeOrder = async (data, userId) => {
             );
             paramIndex += 4;
 
+            deleteValues.push(productId);
+
             // Deduct stock in DB
-            await productStock(
+            const result = await productStock(
                 {
                     id: productId,
                     stock: realProduct.stock - product.quantity
                 },
-                { db: client }
+                {db: client}
             );
+
+            throwIfNotFound(result, "Insufficient stock");
         }
 
         const items = await ordersRepo.addOrderItems(values,
@@ -91,8 +104,13 @@ const placeOrder = async (data, userId) => {
             { db: client }
         );
 
+        await deleteFromCarts({
+            deletePlaceHolder: deletePlaceHolder.join(","),
+            deleteValues
+        });
+
         // Clear user cart content in DB
-        await removeProductFromCart({userId}, {db: client});
+        // await removeProductFromCart({userId}, {db: client});
 
         return {
             message: 'Order placed successfully',
@@ -104,90 +122,10 @@ const placeOrder = async (data, userId) => {
     });
 };
 
-const place = async (data, userId) => {
-    return withTransaction(async (client) => {
-        const cartItems = await getCartContent({userId}, {db: client});
-
-        if (!cartItems.length) {
-            throw AppError("Cart is empty", 400);
-        }
-
-        let totalPrice = 0;
-
-        for (const item of cartItems) {
-            if (item.stock < item.quantity) {
-            throw AppError(`There are only ${item.stock} of ${item.name}(s)`, 409
-            );
-        }
-
-            totalPrice += item.price * item.quantity;
-        }
-
-        // Create order
-        const order = await ordersRepo.placeOrder(
-            {
-                userId,
-                totalPrice,
-                status: "pending",
-                shippingAddress: data.shipping_address,
-                paymentMethod: data.paymentMethod,
-                paidAt: null,
-                deliveredAt: null
-            },
-            { db: client }
-        );
-
-        const placeholders = [];
-        const values = [];
-
-        let paramIndex = 1;
-
-        for (const item of cartItems) {
-            placeholders.push(
-                `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`
-            );
-
-            values.push(
-                order.id,
-                item.id,
-                item.quantity,
-                item.price
-            );
-
-            paramIndex += 4;
-
-            await productStock(
-                {
-                    id: item.id,
-                    stock: -item.quantity
-                },
-                { db: client }
-            );
-        }
-
-        const items = await ordersRepo.addOrderItems(
-            values,
-            placeholders.join(", "),
-            { db: client }
-        );
-
-        await removeProductFromCart({userId}, {db: client}
-        );
-
-        return {
-            message: "Order placed successfully",
-            data: {
-                orderId: order.id,
-                items
-            }
-        };
-    });
-};
-
 //Update order status
 const updateOrderStatus = async(data, id, userId) => {
     return withTransaction(async(client) => {
-        const newData = { status: data.status, id, userId };
+        const newData = {status: data.status, id, userId };
         const result = await ordersRepo.updateOrderStatus(newData, {db: client});
         throwIfNotFound(result, "Order not found");
 

@@ -129,6 +129,16 @@ const findItemOnCart = async(data, ctx) => {
     return rows[0];
 }
 
+//Delete spesific products from cart
+const deleteFromCarts = async(data, ctx) => {
+    const query = `
+        DELETE FROM cart_items
+        WHERE id in (${data.deletePlaceHolder})
+    `;
+
+    await ctx.db.query(query, data.deleteValues);
+}
+
 export {
     addItemToCart,
     initializeCart,
@@ -136,5 +146,6 @@ export {
     getCartContent,
     removeProductFromCart,
     editProductQuantity,
-    findItemOnCart
+    findItemOnCart,
+    deleteFromCarts
 }

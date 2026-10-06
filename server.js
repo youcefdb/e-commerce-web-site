@@ -39,7 +39,7 @@ app.use(cookieParser());
 app.use(express.json());
 
 
-app.use("/api/v1/auth", authLimiter, authRoot);
+app.use("/auth", authLimiter, authRoot);
 app.use(apiLimiter);
 app.use("/api/v1/products", productRoot);
 app.use("/api/v1/categories", categoriesRoot);

@@ -107,7 +107,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             {
                 httpOnly: true,
                 sameSite: "strict",
-                secure: false,
+                secure: true,
                 maxAge: 1000 * 60 * 60 * 24 * 30
             }
         );

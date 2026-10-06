@@ -29,7 +29,8 @@ const updateProfilePic = async(data, ctx = {db: conn}) => {
 //remove user profile photo
 const removePhoto = async(data, ctx = {db: conn}) => {
     const query = `
-        DELETE FROM users
+        UPDATE users
+        SET avatar = NULL
         WHERE id = $1
         RETURNING id, email, avatar, created_at;
     `;

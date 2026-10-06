@@ -1,7 +1,7 @@
 import conn from "../../config/db.config.js";
 
 //Get product reviews
-const getReviews = async (productId, ctx = {db: conn}) => {
+const getReviews = async (data, ctx = {db: conn}) => {
     const query = `
         WITH userInfo AS (
             SELECT id, name, avatar 
@@ -12,9 +12,11 @@ const getReviews = async (productId, ctx = {db: conn}) => {
         FROM reviews r
         JOIN userInfo u ON u.id = r.user_id
         WHERE product_id = $1
+        ORDER BY r.created_at
+        LIMIT $2 OFFSET $3
     `;
 
-    const {rows} = await ctx.db.query(query, [productId]);
+    const {rows} = await ctx.db.query(query, [data.productId, data.limit, data.offset]);
     return rows;
 }
 
