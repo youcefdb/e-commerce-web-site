@@ -15,13 +15,13 @@ const getOrderDetails = asyncHandler(async(req, res) => {
 
 //create order
 const placeOrder = asyncHandler(async(req, res) => {
-    const result = await orderController.placeOrder(req.body, req.user.id);
+    const result = await orderController.placeOrder(req.body, req.user.id, req.idempotencyKey);
     return res.status(200).json(result);
 });
 
 //Update order status
 const updateOrderStatus = asyncHandler(async(req, res) => {
-    const result = await orderController.updateOrderStatus(req.body, req.params.id, req.user.id);
+    const result = await orderController.updateOrderStatus(req.body, req.params.id, req.user.id, req.idempotencyKey);
     return res.status(200).json(result);
 });
 

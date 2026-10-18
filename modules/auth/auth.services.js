@@ -4,11 +4,15 @@ import bcrypt from "bcrypt";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 import crypto from 'crypto';
+import Joi from "joi";
 import withTransaction from "../../utils/transaction.util.js";
 import {generateAndStoreTokens} from "../../utils/token.util.js";
 import {AppError, throwIfNotFound} from '../../errors/errors.js';
 
 dotenv.config();
+
+// Fixed bcrypt hash used to keep password-login work similar when no stored hash exists.
+const DUMMY_PASSWORD_HASH = "$2b$10$h5KjrPP2TcQqYEbfZaL9YuNg98PDIDZxtBvsrh8qZPQVFhBIai0/W";
 
 //Sign in
 const register = async (data, device, ip) => {
@@ -53,16 +57,12 @@ const register = async (data, device, ip) => {
 const login = async (data, device, ip) => {
     return withTransaction(async(client) => {
         const user = await authRepo.findUserByEmail(data.email, {db: client});
+        const hasPassword = Boolean(user?.password);
+        const passwordHash = hasPassword ? user.password : DUMMY_PASSWORD_HASH;
+        const validPw = await bcrypt.compare(data.password, passwordHash);
 
-        throwIfNotFound(user, "Invalid email or password");
-
-        if (!user.password) {
-            throw AppError("This account uses Google Sign-In", 401);
-        }
-
-        const validPw = await bcrypt.compare(data.password, user.password);
-        if (!validPw) {
-            throw AppError("Email or Password incorrect", 401);
+        if (!user || !hasPassword || !validPw) {
+            throw AppError("Invalid email or password.", 401);
         }
 
         const {accessToken, refreshToken} = await generateAndStoreTokens(user, device, ip, client);
@@ -70,7 +70,14 @@ const login = async (data, device, ip) => {
         return {
             accessToken,
             refreshToken,
-            user
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar,
+                created_at: user.created_at
+            }
         }
     });
 }
@@ -99,21 +106,27 @@ const buildGoogleAuthUrl = () => {
     };
 }
 
-//Get user google profile
+//Get user profile
 const googleUserProfile = async (code) => {
-    try {
-            var tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
-            client_id: process.env.CLIENT_ID,
-            client_secret: process.env.CLIENT_SECRET,
-            code,
-            redirect_uri: process.env.REDIRECT_URI,
-            grant_type: 'authorization_code'
-        });
+    const tokenParams = new URLSearchParams({
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
+        code,
+        redirect_uri: process.env.REDIRECT_URI,
+        grant_type: 'authorization_code'
+    });
 
-        // console.log(tokenRes.data);
+    let tokenRes;
+    try {
+        tokenRes = await axios.post(
+            'https://oauth2.googleapis.com/token',
+            tokenParams.toString(),
+            {
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+            }
+        );
     } catch (error) {
-        console.log(error.response?.data);
-        throw error;
+        throw AppError("Google authentication failed", 502 );
     }
 
     throwIfNotFound(tokenRes.data.access_token, "Google Access Token not found");
@@ -121,10 +134,7 @@ const googleUserProfile = async (code) => {
         'https://www.googleapis.com/oauth2/v2/userinfo',
         {
             headers: {Authorization: `Bearer ${tokenRes.data.access_token}`}
-        }
-    );
-
-    console.log(googleProfile.data.name, googleProfile.data.email);
+        });
     return googleProfile.data;
 }
 
@@ -132,10 +142,19 @@ const googleUserProfile = async (code) => {
 const googleLogin = async (code, device, ip) => {
     return withTransaction(async(client) => {
         const googleProfile = await googleUserProfile(code);
-        var user = await authRepo.findUserByEmail(googleProfile.email, {db: client});
-        if (googleProfile.email_verified === false) {
+
+        //Check if user's email has been verified
+        if (googleProfile.verified_email !== true) {
             throw AppError("Google account email is not verified", 401);
         }
+
+        //Check user's email validation
+        const {error: emailError} = Joi.string().email().required().validate(googleProfile.email);
+        if (emailError) {
+            throw AppError("Invalid Google account email", 401);
+        }
+
+        var user = await authRepo.findUserByEmail(googleProfile.email, {db: client});
         if (!user) {
             user = await authRepo.createUser(
                 {
@@ -174,31 +193,40 @@ const refreshAccessToken = async (cookies, device, ip) => {
     }
 
     const userId = decode.userInfo.id;
-    let validation;
-
     const hashedRefreshToken = crypto.createHash("sha256").update(oldRefreshToken).digest("hex");
 
-    const result = withTransaction((async()=>{
-        const user = await authRepo.findUserById(userId, {db: client});
-        throwIfNotFound(user, "Unauthorized");
+    let result;
+    try {
+        result = await withTransaction(async(client) => {
+            const user = await authRepo.findUserByIdForShare(userId, {db: client});
+            throwIfNotFound(user, "Unauthorized");
 
-        validation = await authRepo.findRefreshToken({token: hashedRefreshToken, userId}, {db: client});
-        const newUser = {id: user.id, role: user.role, hashedRefreshToken: hashedRefreshToken};
-        const tokens = await replaceRefreshToken(newUser, device, ip, client);
-        
-        if (!validation) {
-            return {
-                reuse: false,
-                tokens
+            const validation = await authRepo.findRefreshToken(
+                {token: hashedRefreshToken, userId},
+                {db: client}
+            );
+
+            if (!validation) {
+                await authRepo.logoutAllSession(userId, {db: client});
+                return {reuse: true};
             }
-        }
-    }));
 
-    //Handle Reuse token Attack
-    if (!result.reuse) {
-        await authRepo.logoutAllSession(userId, {db: client});
+            const newUser = {id: user.id, role: user.role, hashedRefreshToken};
+            const tokens = await replaceRefreshToken(newUser, device, ip, client);
+            return {reuse: false, tokens};
+        });
+    } catch (error) {
+        //Another request is currently rotating this token; reject it without treating it as reuse.
+        if (error.code === "55P03") {
+            throw AppError("Unauthorized", 401);
+        }
+        throw error;
+    }
+
+    //A validly signed token without an active stored record follows the existing reuse policy.
+    if (result.reuse) {
         throw AppError("Unauthorized", 401);
-    }    
+    }
 
     return result.tokens;
 }

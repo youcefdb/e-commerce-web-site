@@ -3,7 +3,7 @@ import * as wishListServices from "./wishlist.services.js";
 
 //get white list content
 const getWhishlist = asyncHandler(async(req, res) =>{
-    const result = await wishListServices.getWishlist(req.user.id, req.query.page, req.query.limit);
+    const result = await wishListServices.getWishlist(req.user.id, req.validatedQuery.page, req.validatedQuery.limit);
     return res.status(200).json(result);
 })
 

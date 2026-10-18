@@ -1,14 +1,19 @@
 import Joi from "joi";
 
 //get reviews schema
-const getReviewsSchema = Joi.object({
-    id: Joi.string().trim().uuid().required()
+const getReviewsParamsSchema = Joi.object({
+    id: Joi.string().trim().uuid().required(),
+}).unknown(false);
+
+const getReviewsQuerySchema = Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(20)
 }).unknown(false);
 
 //add review schema
 const addReviewSchema = Joi.object({
     productId: Joi.string().trim().uuid().required(),
-    rating: Joi.number().min(1).max(5).required(),
+    rating: Joi.number().integer().min(1).max(5).required(),
     comment: Joi.string().trim().min(2).max(500)
 }).unknown(false);
 
@@ -20,15 +25,20 @@ const deleteReviewSchema = Joi.object({
 
 
 //Edit review schema
+const editReviewParamsSchema = Joi.object({
+    id: Joi.string().trim().uuid().required()
+}).unknown(false);
+
 const editReviewSchema = Joi.object({
-    id: Joi.string().trim().uuid().required(),
     rating: Joi.number().min(1).max(5).optional(),
     comment: Joi.string().trim().min(2).max(500).optional()
 }).unknown(false);
 
 export {
-    getReviewsSchema,
+    getReviewsParamsSchema,
+    getReviewsQuerySchema,
     addReviewSchema,
     deleteReviewSchema,
+    editReviewParamsSchema,
     editReviewSchema
 }

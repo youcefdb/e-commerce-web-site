@@ -17,6 +17,7 @@ const upload = multer({
 
     fileFilter: (req, file, cb) => { //type of file (we can find it on HTTP headers as a content-type)
         const allowedType = [
+            "image/jpeg",
             "image/jpg",
             "image/png",
             "image/webp"

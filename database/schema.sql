@@ -20,9 +20,6 @@ CREATE TABLE users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_users_email
-ON users(email);
-
 CREATE INDEX idx_users_role
 ON users(role);
 
@@ -195,7 +192,7 @@ ON refresh_tokens(user_id);
 
 CREATE TABLE wishlists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -210,14 +207,51 @@ CREATE TABLE wishlist_items (
     UNIQUE(wishlist_id, product_id)
 );
 
+
+-- =========================================================
+-- IDEMPOTENCY KEYS
+-- =========================================================
+
+CREATE TABLE idempotency_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID NOT NULL,
+    idempotency_key UUID NOT NULL,
+
+    request_hash VARCHAR(64) NOT NULL,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'in_progress'
+        CHECK (status IN ('in_progress', 'completed')),
+
+    response_status INTEGER,
+    response_body JSONB,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours'),
+
+    CONSTRAINT fk_idempotency_keys_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT unique_user_idempotency_key
+        UNIQUE (user_id, idempotency_key),
+
+    CONSTRAINT check_completed_response
+        CHECK (
+            status <> 'completed'
+            OR (
+                response_status IS NOT NULL
+                AND response_body IS NOT NULL
+            )
+        )
+);
+
 -- =========================================================
 -- INDEXES
 -- =========================================================
 
 -- CATEGORIES
-
-CREATE INDEX idx_categories_slug
-ON categories(slug);
 
 -- PRODUCTS
 
@@ -236,9 +270,6 @@ ON products(rating);
 CREATE INDEX idx_products_created_at
 ON products(created_at DESC);
 
-CREATE INDEX idx_products_slug
-ON products(slug);
-
 -- FULL TEXT SEARCH
 
 CREATE INDEX idx_products_search
@@ -252,9 +283,6 @@ USING gin (
 );
 
 -- CARTS
-
-CREATE INDEX idx_carts_user
-ON carts(user_id);
 
 -- CART ITEMS
 
@@ -290,3 +318,8 @@ ON reviews(product_id);
 
 CREATE INDEX idx_reviews_user
 ON reviews(user_id);
+
+-- IDEMPOTENCY KEYS
+
+CREATE INDEX idx_idempotency_keys_expires_at
+ON idempotency_keys(expires_at);

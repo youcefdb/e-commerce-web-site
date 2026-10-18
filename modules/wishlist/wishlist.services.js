@@ -9,9 +9,7 @@ const getWishlist = async(userId, page, limit) => {
     const {safePage, safeLimit, offset} = getPagination(page, limit);
     
     const result = await wishListRepo.getWhishlist(userId, safeLimit, offset);
-    throwIfNotFound(result, "Your wishlist is empty");
-
-    return buildResponce(result, safePage, offset);
+    return buildResponce(result.data, safePage, offset, result.totalCount);
 }
 
 //add item to white list
@@ -23,6 +21,9 @@ const addTowishlist = async(data, userId) => {
         var wishlist = await wishListRepo.findWhishlist(userId, {db: client});
         if (!wishlist) {
             wishlist = await wishListRepo.initializeWhishlist(userId, {db: client});
+            if (!wishlist) {
+                wishlist = await wishListRepo.findWhishlist(userId, {db: client});
+            }
         }
 
         try {

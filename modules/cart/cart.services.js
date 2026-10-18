@@ -14,26 +14,19 @@ const addProductToCart = async (data, userId) => {
         const product = await viewProduct(data.productId, {db: client});
         throwIfNotFound(product, "Product not found");
 
-        var item;
-        const existProduct = await cartRepo.findItemOnCart({productId: data.productId, userId}, {db: client});
-        if (existProduct) {
-            if (product.stock < (data.quantity + existProduct.quantity)) {
-                throw AppError("Requested quantity exceeds available stock", 400);
-            }
+        if (product.stock < data.quantity) {
+            throw AppError("Product is out of stock", 400);
+        }
 
-            item = await cartRepo.editProductQuantity({userId, quantity: existProduct.quantity + data.quantity, id: product.id}, {db: client});
-        } else{
-            if (product.stock < data.quantity) {
-                throw AppError("Product is out of stock", 400);
-            }
+        const item = await cartRepo.addOrIncrementItemOnCart({
+            cartId: cart.id,
+            productId: data.productId,
+            quantity: data.quantity,
+            availableStock: product.stock
+        }, {db: client});
 
-            const newData = {
-                cartId: cart.id,
-                productId: data.productId,
-                quantity: data.quantity
-            }
-
-            item = await cartRepo.addItemToCart(newData, {db: client});
+        if (!item) {
+            throw AppError("Requested quantity exceeds available stock", 400);
         }
 
         
@@ -113,6 +106,7 @@ const editProductQuantity = async (data, userId) => {
             
             const newData = {...data, userId}
             var result = await cartRepo.editProductQuantity(newData, {db: client});
+            throwIfNotFound(result, "Cart item not found");
             return {
                 data: result
             };

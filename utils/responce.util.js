@@ -16,11 +16,12 @@ const getPagination = (page = 1, limit = 10) => {
 }
 
 //Build unique responce stracture
-const buildResponce = (data, page, offset) => {
+const buildResponce = (data, page, offset, totalCount) => {
     return{
         page,
         offset,
         count: data.length,
+        totalCount,
         data
     }
 }

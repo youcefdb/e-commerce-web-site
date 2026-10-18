@@ -1,24 +1,25 @@
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import { buildResponce, getPagination } from "../../utils/responce.util.js";
 import withTransaction from "../../utils/transaction.util.js";
-import { viewProduct } from "../products/product.repo.js";
+import { lockProduct, updateProduct } from "../products/product.repo.js";
 import * as reviewsRepo from "./reviews.repo.js";
 
 //get product reviews
 const getReviews = async(productId, page, limit) => {
     const {safePage, safeLimit, offset} = getPagination(page, limit);
     const result = await reviewsRepo.getReviews({productId, limit: safeLimit, offset});
-    throwIfNotFound(result, "Be the first to review this product!");
-    return buildResponce(result, safePage, offset);
+    return buildResponce(result.data, safePage, offset, result.totalCount);
 }
 
 //Add review to product
 const addReview = async (data, userId) => {
     return withTransaction(async(client) => {
-        const product = await viewProduct(data.productId, {db: client});
+        const product = await lockProduct(data.productId, {db: client});
         throwIfNotFound(product, "Product not found");
+
         const newData = {...data, userId};
         const result = await reviewsRepo.addReview(newData, {db: client});
+        await updateProduct(data.productId, {db: client});
         return {
             message: "Review added successfully",
             data: result
@@ -29,10 +30,15 @@ const addReview = async (data, userId) => {
 //delete user review from product
 const deleteReview = async(reviewId, userId) => {
     return withTransaction(async(client) => {
+        const existingReview = await reviewsRepo.getReview({reviewId, userId}, {db: client});
+        throwIfNotFound(existingReview, "Review not found");
 
-        const newData = {id:reviewId, userId};
-        const result = await reviewsRepo.deleteReview(newData, {db: client});
+        throwIfNotFound(await lockProduct(existingReview.product_id, {db: client}), "Review not found");
+        const review = await reviewsRepo.findReview({reviewId, userId}, {db: client});
+        throwIfNotFound(review, "Review not found");
+        const result = await reviewsRepo.deleteReview({id: reviewId, userId}, {db: client});
         throwIfNotFound(result, "Review not found");
+        await updateProduct(review.product_id, {db: client});
 
         return {
             message: "Review deleted successfully"
@@ -43,9 +49,11 @@ const deleteReview = async(reviewId, userId) => {
 //Edit review afer submit
 const editReview = async(data, reviewId, userId) => {
     return withTransaction(async(client) => {
-        var newData = {userId, reviewId};
-        console.log(newData.userId, newData.reviewId);
-        const review = await reviewsRepo.findReview(newData, {db: client});
+        const existingReview = await reviewsRepo.getReview({userId, reviewId}, {db: client});
+        throwIfNotFound(existingReview, "Review not found");
+        throwIfNotFound(await lockProduct(existingReview.product_id, {db: client}), "Review not found");
+
+        const review = await reviewsRepo.findReview({userId, reviewId}, {db: client});
         throwIfNotFound(review, "Review not found");
         
         let values = [];
@@ -69,6 +77,9 @@ const editReview = async(data, reviewId, userId) => {
         values.push(review.id, userId);
 
         const result = await reviewsRepo.editReview(values, params, {db: client});
+        if (data.rating !== undefined && data.rating !== review.rating) {
+            await updateProduct(review.product_id, {db: client});
+        }
 
         return {
             message: "Review updated successfully",

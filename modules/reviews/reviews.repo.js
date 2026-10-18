@@ -12,12 +12,21 @@ const getReviews = async (data, ctx = {db: conn}) => {
         FROM reviews r
         JOIN userInfo u ON u.id = r.user_id
         WHERE product_id = $1
-        ORDER BY r.created_at
+        ORDER BY r.created_at, r.id
         LIMIT $2 OFFSET $3
     `;
 
-    const {rows} = await ctx.db.query(query, [data.productId, data.limit, data.offset]);
-    return rows;
+    const countQuery = `
+        SELECT COUNT(*) AS total_count
+        FROM reviews
+        WHERE product_id = $1
+    `;
+
+    const [{rows}, {rows: countRows}] = await Promise.all([
+        ctx.db.query(query, [data.productId, data.limit, data.offset]),
+        ctx.db.query(countQuery, [data.productId])
+    ]);
+    return {data: rows, totalCount: Number(countRows[0].total_count)};
 }
 
 //Add review to product
@@ -25,7 +34,7 @@ const addReview = async (data, ctx) => {
     const query = `
         INSERT INTO reviews(user_id, product_id, rating, comment)
         VALUES($1, $2, $3, $4)
-        RETURNING rating, comment;
+        RETURNING id, rating, comment;
     `;
 
     const {rows} = await ctx.db.query(query, [data.userId, data.productId, data.rating, data.comment]);
@@ -47,11 +56,13 @@ const deleteReview = async (data, ctx) => {
 
 //edit posted review
 const editReview = async(values, params, ctx) => {
+    const idIndex = values.length - 1;
+    const userIdIndex = values.length;
     const query = `
         UPDATE reviews
         SET ${params.join(",")}
-        WHERE id = $${++params.length}
-        AND user_id =$${++params.length}
+        WHERE id = $${idIndex}
+        AND user_id = $${userIdIndex}
         RETURNING rating, comment, created_at;
     `;
 
@@ -59,10 +70,10 @@ const editReview = async(values, params, ctx) => {
     return rows[0];
 }
 
-//find review by id
-const findReview = async (data, ctx = {db: conn}) => {
+//Read the review's product before locking the product row.
+const getReview = async (data, ctx = {db: conn}) => {
     const query = `
-        SELECT id, comment, rating 
+        SELECT id, product_id, comment, rating
         FROM reviews
         WHERE id = $1
         AND user_id = $2
@@ -71,10 +82,26 @@ const findReview = async (data, ctx = {db: conn}) => {
     const {rows} = await ctx.db.query(query, [data.reviewId, data.userId]);
     return rows[0];
 }
+
+//Lock the review after its product row has been locked by the service.
+const findReview = async (data, ctx = {db: conn}) => {
+    const query = `
+        SELECT id, product_id, comment, rating
+        FROM reviews
+        WHERE id = $1
+        AND user_id = $2
+        FOR UPDATE
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.reviewId, data.userId]);
+    return rows[0];
+}
+
 export{
     getReviews,
     addReview,
     deleteReview,
     editReview,
+    getReview,
     findReview
 }

@@ -1,12 +1,17 @@
 import dotenv from "dotenv";
 import { AppError } from "../errors/errors.js";
+import { isAllowedOrigin } from "../config/cors.config.js";
 dotenv.config();
 
 //Allowed origins
 const corsValidation = (req, res, next) => {
     const requiredEnv = [
-        "DATABASE_URL",
-        "JWT_SECRET",
+        "DATABASE_HOST",
+        "DATABASE_PORT",
+        "DATABASE_NAME",
+        "DATABASE_USERNAME",
+        "DATABASE_PASSWORD",
+        "ACCESS_TOKEN_SECRET",
         "REFRESH_TOKEN_SECRET",
         "ALLOWED_ORIGINS"
     ];
@@ -17,9 +22,7 @@ const corsValidation = (req, res, next) => {
         }
     }
 
-    const origines = process.env.ALLOWED_ORIGINS.split(",").map(or => or.trim()).filter(Boolean);
-
-    if (["PATCH", "POST", "PUT", "DELETE"].includes(req.method) && !origines.includes(req?.headers.origin)) {
+    if (["PATCH", "POST", "PUT", "DELETE"].includes(req.method) && !isAllowedOrigin(req.headers.origin)) {
         return res.status(403).json({
             message: "Invalid Origin"
         });

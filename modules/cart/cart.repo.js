@@ -12,6 +12,27 @@ const addItemToCart = async (data, ctx) => {
     return rows[0];
 }
 
+//Atomically add to an existing cart item or create a new one
+const addOrIncrementItemOnCart = async (data, ctx) => {
+    const query = `
+        INSERT INTO cart_items(cart_id, product_id, quantity)
+        VALUES($1, $2, $3)
+        ON CONFLICT (cart_id, product_id)
+        DO UPDATE
+        SET quantity = cart_items.quantity + EXCLUDED.quantity
+        WHERE cart_items.quantity + EXCLUDED.quantity <= $4
+        RETURNING id, cart_id, product_id, quantity
+    `;
+
+    const {rows} = await ctx.db.query(query, [
+        data.cartId,
+        data.productId,
+        data.quantity,
+        data.availableStock
+    ]);
+    return rows[0];
+}
+
 //initialize a cart to user
 const initializeCart = async (userId, createdAt, ctx) => {
     const query = `
@@ -132,15 +153,19 @@ const findItemOnCart = async(data, ctx) => {
 //Delete spesific products from cart
 const deleteFromCarts = async(data, ctx) => {
     const query = `
-        DELETE FROM cart_items
-        WHERE id in (${data.deletePlaceHolder})
+        DELETE FROM cart_items ci
+        USING carts c
+        WHERE c.id = ci.cart_id
+            AND c.user_id = $1
+            AND ci.product_id = ANY($2::uuid[])
     `;
 
-    await ctx.db.query(query, data.deleteValues);
+    await ctx.db.query(query, [data.userId, data.productIds]);
 }
 
 export {
     addItemToCart,
+    addOrIncrementItemOnCart,
     initializeCart,
     findCartByUserId,
     getCartContent,

@@ -6,8 +6,8 @@ import { loginValidationSchema, registerValidationSchema } from "./auth.validati
 const authRoot = express.Router();
 
 authRoot
-    .post("/register", schemaValidator(registerValidationSchema), authController.register)//email + pass + name
-    .post("/login", schemaValidator(loginValidationSchema), authController.login)// email + pass
+    .post("/register", schemaValidator({body: registerValidationSchema}), authController.register)//email + pass + name
+    .post("/login", schemaValidator({body: loginValidationSchema}), authController.login)// email + pass
     .get("/google", authController.buildGoogleAuthUrl)
     .get("/google/callback", authController.googleLogin)
     .post("/refresh", authController.refreshAccessToken)//refresh access token

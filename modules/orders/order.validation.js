@@ -5,6 +5,11 @@ const getOrderDetailsSchema = Joi.object({
     id: Joi.string().trim().uuid().required()
 }).unknown(false);
 
+const product = Joi.object({
+    productId: Joi.string().trim().uuid().required(),
+    quantity: Joi.number().integer().positive().max(10).required()
+});
+
 const placeOrderSchema = Joi.object({
   shipping_address: Joi.object({
     fullName: Joi.string().trim().required(),
@@ -17,25 +22,27 @@ const placeOrderSchema = Joi.object({
   paymentMethod: Joi.string().trim().required(),
   paidAt: Joi.date().allow(null),
 
-  product: Joi.object({
-    productId: Joi.uuid().trim().required(),
-    quantity: Joi.number().integer().positive().max(10)
-  }),
+  product,
 
   products: Joi.object({
-    items: Joi.array().items(product).unique("productId").required()
+    items: Joi.array().items(product).unique("productId").min(1).required()
   })
 
-}).unknown(false);
+}).xor("product", "products").unknown(false);
 
 
 const statuses = ['pending', 'delivered', 'cancelled'];
-const updateOrderStatusSchema = Joi.object({
-  id: Joi.string().trim().uuid().required(),
+const updateOrderStatusParamsSchema = Joi.object({
+  id: Joi.string().trim().uuid().required()
+}).unknown(false);
+
+const updateOrderStatusBodySchema = Joi.object({
   status: Joi.string().trim().lowercase().valid(...statuses).required()
-});
+}).unknown(false);
+
 export {
     getOrderDetailsSchema,
     placeOrderSchema,
-    updateOrderStatusSchema
+    updateOrderStatusParamsSchema,
+    updateOrderStatusBodySchema
 }

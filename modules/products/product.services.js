@@ -16,7 +16,7 @@ const viewProduct = async(productId) => {
 const getProducts = async (filter, page, limit) => {
     const {safePage, safeLimit, offset} = getPagination(page, limit);
     const result = await productRepo.getProducts(filter, safeLimit, offset);
-    return buildResponce(result, safePage, offset);
+    return buildResponce(result.data, safePage, offset, result.totalCount);
 }
 
 

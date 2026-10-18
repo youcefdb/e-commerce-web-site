@@ -1,22 +1,41 @@
 import path from "path";
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import withTransaction from "../../utils/transaction.util.js";
-import { findUserByEmail, findUserById } from "../auth/auth.repo.js";
+import { findUserByEmail, findUserById, logoutAllSession } from "../auth/auth.repo.js";
 import * as usersRepo from "../users/repo.users.js";
 import fs from "fs/promises";
 import sharp from "sharp";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
+const uploadDir = path.join(process.cwd(), "upload", "image");
+await fs.mkdir(uploadDir, {recursive: true});
+
+const getStoredPhotoPath = (avatar) => {
+    if (typeof avatar !== "string" || avatar.length === 0 || path.isAbsolute(avatar)) {
+        return null;
+    }
+
+    const absolutePath = path.resolve(process.cwd(), avatar);
+    const relativePath = path.relative(uploadDir, absolutePath);
+    if (!relativePath || relativePath === "." || relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+        return null;
+    }
+
+    return absolutePath;
+};
+
 //Update user profile
 const updateUser = (userId, data) => {
     return withTransaction(async(client) => {
         const {name, email, password} = data;
         const user = await findUserById(userId, {db: client});
+        throwIfNotFound(user, "User not found");
 
         let params = [];
         let values = [];
         let index = 2;
+        let passwordChanged = false;
 
         if (email) {
             const findEmail = await findUserByEmail(email, {db: client});
@@ -42,15 +61,26 @@ const updateUser = (userId, data) => {
         }
 
         if (password && user.password != null) {
+            const validCurrentPassword = await bcrypt.compare(data.currentPassword, user.password);
+            if (!validCurrentPassword) {
+                throw AppError("Current password is incorrect", 401);
+            }
+
             const newPassword = await bcrypt.hash(password, 10);
             params.push(`password = $${index++}`);
             values.push(newPassword);
+            passwordChanged = true;
+        } else if (password) {
+            throw AppError("This account does not have a password", 409);
         }
 
         if (params.length > 0) {
             params.push(`updated_at = $${index++}`);
             values.push(new Date());
             var result = await usersRepo.updateUser(params, values, user.id, {db: client});
+            if (passwordChanged) {
+                await logoutAllSession(user.id, {db: client});
+            }
         }else{
             throw AppError("Update at least an attribute", 422);
         }
@@ -66,7 +96,6 @@ const updateUser = (userId, data) => {
 const viewProfile = async (userId) => {
     const data = await findUserById(userId);
     throwIfNotFound(data, "User not found");
-    console.log(userId)
 
     const profile = {
         id: data.id,
@@ -91,15 +120,10 @@ const uploadProfilePic = async (photo, userId) => {
     const photoBuffer = await processPhoto(photo);
 
     const fileName = `${crypto.randomUUID()}.webp`; //new file name
-    const uploadDir = path.join(process.cwd(), "upload", "image"); //Current path
     const absolutePath = path.join(uploadDir, fileName); //Image complete path
     const relativePath = path.join("upload", "image", fileName); //Image current path
 
-    let oldPhoto = null;
-
-    if (user.avatar) {
-        oldPhoto = path.join(process.cwd(), user.avatar);
-    }
+    const oldPhoto = getStoredPhotoPath(user.avatar);
 
     //save new image
     try {
@@ -163,11 +187,16 @@ const processPhoto = async(photo) => {
 
 //Remove profile picture
 const removePhoto = async(userId) => {
+    const user = await findUserById(userId);
+    throwIfNotFound(user, "User not found");
+
     const result = await usersRepo.removePhoto({id: userId});
     throwIfNotFound(result, "Fiald to delete the photo");
 
-    const absolutePath = path.join(process.cwd(), result.avatar);
-    await fs.unlink(absolutePath).catch(() => {});
+    const oldPhoto = getStoredPhotoPath(user.avatar);
+    if (oldPhoto) {
+        await fs.unlink(oldPhoto).catch(() => {});
+    }
 
     return {
         message: "Profile Picture removed successfully"

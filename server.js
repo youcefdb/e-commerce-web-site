@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from "cors";
+import corsOptions from "./config/cors.config.js";
 import helmet from "helmet";
 import path from 'path';
 import cookieParser from 'cookie-parser';
@@ -23,13 +24,9 @@ const app = express();
 //Allowed origin for accessing our server
 app.use(corsValidation);
 
-app.use("/upload", express.static(path.join(process.cwd(), "upload")))
 
 //Allowed some origins to read JS thier responce
-app.use(cors({
-    origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.trim() : 'http://localhost:3000',
-    credentials: true
-}))
+app.use(cors(corsOptions));
 
 //Add secure headers
 app.use(helmet());
@@ -46,6 +43,7 @@ app.use("/api/v1/categories", categoriesRoot);
 app.use("/api/v1/reviews", reviewRoot);
 
 app.use(verifyJwtToken, roleAuthorize(PERMISSION.CUSTOMER, PERMISSION.ADMIN));
+app.use("/upload", express.static(path.join(process.cwd(), "upload")))
 app.use("/api/v1/users", userRoot);
 app.use("/api/v1/cart", cartRoot);
 app.use("/api/v1/whishLists", whiteListRoot);

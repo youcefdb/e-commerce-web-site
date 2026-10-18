@@ -14,15 +14,26 @@ const getWhishlist = async(userId, limit, offset, ctx = {db:conn}) => {
             WHERE user_id = $1 
         )
 
-        SELECT up.name, up.description, up.price, up.rating, up.num_reviews
+        SELECT wi.id, up.name, up.description, up.price, up.rating, up.num_reviews
         FROM user_products up
         JOIN wishlist_items wi ON wi.product_id = up.id
         JOIN white_products wp ON wp.id = wi.wishlist_id
+        ORDER BY wi.id
         LIMIT $2 OFFSET $3
     `;
 
-    const {rows} = await ctx.db.query(query, [userId, limit, offset]);
-    return rows;
+    const countQuery = `
+        SELECT COUNT(*) AS total_count
+        FROM wishlist_items wi
+        JOIN wishlists w ON w.id = wi.wishlist_id
+        WHERE w.user_id = $1
+    `;
+
+    const [{rows}, {rows: countRows}] = await Promise.all([
+        ctx.db.query(query, [userId, limit, offset]),
+        ctx.db.query(countQuery, [userId])
+    ]);
+    return {data: rows, totalCount: Number(countRows[0].total_count)};
 }
 
 //Create white list
@@ -30,6 +41,7 @@ const initializeWhishlist = async(userId, ctx) => {
     const query = `
         INSERT INTO wishlists(user_id)
         VALUES($1)
+        ON CONFLICT (user_id) DO NOTHING
         RETURNING *
     `;
 

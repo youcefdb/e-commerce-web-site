@@ -3,39 +3,40 @@ import * as productServers from "./product.services.js";
 
 //Get products with filtring 
 const getProducts = asyncHandler(async(req, res) => {
+        const query = req.validatedQuery;
         var filter = {};
 
-        if (req.query.search != undefined) {
-            filter.search = req.query.search;
+        if (query.search != undefined) {
+            filter.search = query.search;
         }
 
-        if (req.query.minPrice != undefined) {
-            filter.minPrice = req.query.minPrice
+        if (query.minPrice != undefined) {
+            filter.minPrice = query.minPrice
         }
 
-        if (req.query.maxPrice != undefined) {
-            filter.maxPrice = req.query.maxPrice
+        if (query.maxPrice != undefined) {
+            filter.maxPrice = query.maxPrice
         }
 
-        if (req.query.category != undefined) {
-            filter.category = req.query.category
+        if (query.category != undefined) {
+            filter.category = query.category
         }
 
-        if (req.query.sort === "price") {
+        if (query.sort === "price") {
             filter.sort = 'price';
-        }else if(req.query.sort === "newest"){
+        }else if(query.sort === "newest"){
             filter.sort = 'newest';
-        }else if (req.query.sort === "rating") {
+        }else if (query.sort === "rating") {
             filter.sort = 'rating';
         }
         
-        if (req.query.order == "desc") {
+        if (query.order == "desc") {
             filter.order = "desc"
-        }else if(req.query.order == "asc"){
+        }else if(query.order == "asc"){
             filter.order = "asc"
         }
 
-        const result = await productServers.getProducts(filter, req.query.page, req.query.limit);
+        const result = await productServers.getProducts(filter, query.page, query.limit);
         return res.status(200).json(result);
 })
 

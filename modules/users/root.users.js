@@ -8,7 +8,7 @@ const userRoot = express.Router();
 
 userRoot
     .get("/me", userController.viewProfile)
-    .patch("/me", schemaValidator(updateUserSchema), userController.updateUser)
+    .patch("/me", schemaValidator({body: updateUserSchema}), userController.updateUser)
     .post("/image", upload.single("image"), userController.uploadProfilePic)
     .delete("/me", userController.removePhoto)
 

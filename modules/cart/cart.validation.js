@@ -3,23 +3,22 @@ import Joi from "joi";
 //Schema for adding product to cart
 const addProductToCartSchema = Joi.object({
     productId: Joi.string().trim().uuid().required(),
-    quantity: Joi.number().integer().max(10).min(0).required(),
+    quantity: Joi.number().integer().positive().max(10).required(),
 }).unknown(false);
 
 //Remove product from cart schema
-const removeCartProductSchema = Joi.object({
+const cartItemParamsSchema = Joi.object({
     id: Joi.string().trim().uuid().required()
 }).unknown(false);
 
-//Edit amount of bought product
+//Edit amount of a product in the request body
 const editProductQuantitySchema = Joi.object({
-    id: Joi.string().trim().uuid().required(),
     quantity: Joi.number().integer().max(10).required(),
 }).unknown(false);
 
 
 export{
     addProductToCartSchema,
-    removeCartProductSchema,
+    cartItemParamsSchema,
     editProductQuantitySchema
 }

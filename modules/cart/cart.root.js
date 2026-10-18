@@ -7,8 +7,11 @@ const cartRoot = express.Router();
 
 cartRoot
     .get("/", cartController.getCartContent)
-    .post("/items", schemaValidator(productSchema.addProductToCartSchema), cartController.addProductToCart)
-    .patch("/items/:id", schemaValidator(productSchema.editProductQuantitySchema), cartController.editProductQuantity)
-    .delete("/items/:id", schemaValidator(productSchema.removeCartProductSchema),cartController.removeProductFromCart)
+    .post("/items", schemaValidator({body: productSchema.addProductToCartSchema}), cartController.addProductToCart)
+    .patch("/items/:id", schemaValidator({
+        params: productSchema.cartItemParamsSchema,
+        body: productSchema.editProductQuantitySchema
+    }), cartController.editProductQuantity)
+    .delete("/items/:id", schemaValidator({params: productSchema.cartItemParamsSchema}),cartController.removeProductFromCart)
 
 export default cartRoot;

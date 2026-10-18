@@ -3,7 +3,7 @@ import * as reviewsServices from "./reviews.services.js";
 
 //get product reviews by id
 const getReviews = asyncHandler(async(req, res) => {
-    const result = await reviewsServices.getReviews(req.params.id, req.query.page, req.query.limit);
+    const result = await reviewsServices.getReviews(req.params.id, req.validatedQuery.page, req.validatedQuery.limit);
     return res.status(200).json(result);
 });
 
