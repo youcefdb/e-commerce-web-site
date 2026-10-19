@@ -16,6 +16,7 @@ import categoriesRoot from './modules/categories/categories.root.js';
 import reviewRoot from './modules/reviews/reviews.root.js';
 import whiteListRoot from './modules/wishlist/wishlist.root.js';
 import orderRoot from './modules/orders/orders.root.js';
+import adminRoot from "./modules/admin/admin.root.js";
 import { apiLimiter, authLimiter } from './middleware/rateLimit.middleware.js';
 import globalMiddelware from './middleware/gobalMiddelware.middleware.js';
 
@@ -48,6 +49,7 @@ app.use("/api/v1/users", userRoot);
 app.use("/api/v1/cart", cartRoot);
 app.use("/api/v1/whishLists", whiteListRoot);
 app.use("/api/v1/orders", orderRoot);
+app.use("/api/v1/admin", adminRoot);
 
 //Global err middleware for catching erros
 app.use(globalMiddelware);

@@ -133,7 +133,8 @@ const placeOrder = async (data, userId, idKey) => {
 
         const keyIdempotencyData = {
             userId,
-            idKey
+            idKey,
+            status: "completed"
         }
 
         const storeKey = await addIdempotencyKey(keyIdempotencyData, {db: client});
@@ -150,29 +151,6 @@ const placeOrder = async (data, userId, idKey) => {
         };
     });
 };
-
-//Update order status
-const updateOrderStatus = async(data, id, userId, idKey) => {
-    return withTransaction(async(client) => {
-        const newData = {status: data.status, id, userId };
-        const result = await ordersRepo.updateOrderStatus(newData, {db: client});
-        throwIfNotFound(result, "Order not found");
-
-        const keyIdempotencyData = {
-            userId,
-            idKey
-        }
-
-        const storeKey = await addIdempotencyKey(keyIdempotencyData, {db: client});
-        if(!storeKey){
-            throw AppError("Failed to store idempotency key", 500);
-        }
-
-        return{
-            message: "Status updated successfully"
-        }
-    });
-}
 
 export {
     getOrders,

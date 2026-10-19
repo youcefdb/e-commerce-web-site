@@ -113,12 +113,12 @@ const logoutAllSession = async(userId, ctx = {db: conn}) => {
 //Add Idempotency Key
 const addIdempotencyKey = async (data, ctx = {db: conn}) => {
     const query = `
-        INSERT INSTO idempotency_keys(user_id, idempotency_key, request_hash)
-        VALUES($1, $2, $3)
+        INSERT INTO idempotency_keys(user_id, idempotency_key, request_hash, status)
+        VALUES($1, $2, $3, $4)
         RETURNING id
     `;
 
-    const {rows} = await ctx.db.query(query, [data.userId, data.idKey, hashRequest]);
+    const {rows} = await ctx.db.query(query, [data.userId, data.idKey, hashRequest, data.status]);
     return rows[0];
 }
 
