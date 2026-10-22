@@ -1,7 +1,10 @@
 import dotenv from "dotenv";
-import app from "./server.js";
 
 dotenv.config();
+const {validateEnvironment} = await import("./config/environment.config.js");
+validateEnvironment();
+
+const {default: app} = await import("./server.js");
 const port = process.env.PORT ?? 3500;
 
 app.listen(port, () => {

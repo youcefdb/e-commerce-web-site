@@ -1,4 +1,14 @@
 import Joi from "joi";
+import {
+  DEFAULT_ORDERS_PAGE_SIZE,
+  MAX_ORDERS_PAGE,
+  MAX_ORDERS_PAGE_SIZE
+} from "./orders.pagination.js";
+
+const getOrdersQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).max(MAX_ORDERS_PAGE).default(1),
+  limit: Joi.number().integer().min(1).max(MAX_ORDERS_PAGE_SIZE).default(DEFAULT_ORDERS_PAGE_SIZE)
+}).unknown(false);
 
 //Get user order details schema
 const getOrderDetailsSchema = Joi.object({
@@ -16,7 +26,7 @@ const placeOrderSchema = Joi.object({
     country: Joi.string().trim().required(),
     city: Joi.string().trim().required(),
     address: Joi.string().trim().required(),
-    postal_code: Joi.number().min(3).max(6)
+    postal_code: Joi.string().trim().min(1).max(32)
   }).required(),
 
   paymentMethod: Joi.string().trim().required(),
@@ -31,16 +41,18 @@ const placeOrderSchema = Joi.object({
 }).xor("product", "products").unknown(false);
 
 
-const statuses = ['pending', 'delivered', 'cancelled'];
+const orderStatuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
 const updateOrderStatusParamsSchema = Joi.object({
   id: Joi.string().trim().uuid().required()
 }).unknown(false);
 
 const updateOrderStatusBodySchema = Joi.object({
-  status: Joi.string().trim().lowercase().valid(...statuses).required()
+  status: Joi.string().trim().lowercase().valid(...orderStatuses).required()
 }).unknown(false);
 
 export {
+    getOrdersQuerySchema,
+    orderStatuses,
     getOrderDetailsSchema,
     placeOrderSchema,
     updateOrderStatusParamsSchema,

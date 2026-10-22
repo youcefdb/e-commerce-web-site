@@ -1,15 +1,38 @@
 import conn from "../../config/db.config.js";
+import {
+    DEFAULT_ORDERS_PAGE_SIZE,
+    MAX_ORDERS_OFFSET,
+    MAX_ORDERS_PAGE_SIZE
+} from "./orders.pagination.js";
 
 //Get user orders
-const getOrders = async(userId, ctx = {db:conn}) => {
+const getOrders = async(userId, limit = DEFAULT_ORDERS_PAGE_SIZE, offset = 0, ctx = {db:conn}) => {
+    const boundedLimit = Number.isSafeInteger(limit)
+        ? Math.min(Math.max(limit, 1), MAX_ORDERS_PAGE_SIZE)
+        : DEFAULT_ORDERS_PAGE_SIZE;
+    const boundedOffset = Number.isSafeInteger(offset)
+        ? Math.min(Math.max(offset, 0), MAX_ORDERS_OFFSET)
+        : 0;
+
     const query = `
         SELECT id, total_price, status, created_at
         FROM orders
         WHERE user_id = $1
+        ORDER BY created_at DESC, id DESC
+        LIMIT $2 OFFSET $3
     `;
 
-    const {rows} = await ctx.db.query(query, [userId]);
-    return rows;
+    const countQuery = `
+        SELECT COUNT(*) AS total_count
+        FROM orders
+        WHERE user_id = $1
+    `;
+
+    const [{rows}, {rows: countRows}] = await Promise.all([
+        ctx.db.query(query, [userId, boundedLimit, boundedOffset]),
+        ctx.db.query(countQuery, [userId])
+    ]);
+    return {data: rows, totalCount: Number(countRows[0].total_count)};
 }
 
 //Get orders items and details
@@ -40,6 +63,51 @@ const getOrderDetails = async(data, ctx = {db:conn}) => {
 
     const {rows} = await ctx.db.query(query, [data.userId, data.orderId]);
     return rows;
+}
+
+// Lock a customer's order before evaluating a cancellation transition.
+const findUserOrderForUpdate = async(data, ctx) => {
+    const query = `
+        SELECT id, status
+        FROM orders
+        WHERE id = $1 AND user_id = $2
+        FOR UPDATE
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.orderId, data.userId]);
+    return rows[0];
+}
+
+// Read persisted order quantities, grouped and ordered to match checkout's
+// product-row lock order.
+const getOrderInventory = async(orderId, ctx) => {
+    const query = `
+        SELECT product_id, SUM(quantity)::integer AS quantity
+        FROM order_items
+        WHERE order_id = $1
+        GROUP BY product_id
+        ORDER BY product_id
+    `;
+
+    const {rows} = await ctx.db.query(query, [orderId]);
+    return rows;
+}
+
+const updateUserOrderStatus = async(data, ctx) => {
+    const query = `
+        UPDATE orders
+        SET status = $1
+        WHERE id = $2 AND user_id = $3 AND status = $4
+        RETURNING id, status
+    `;
+
+    const {rows} = await ctx.db.query(query, [
+        data.status,
+        data.orderId,
+        data.userId,
+        data.currentStatus
+    ]);
+    return rows[0];
 }
 
 //create order
@@ -92,6 +160,9 @@ const addOrderItems = async (values, placeholders, ctx) => {
 export{
     getOrders,
     getOrderDetails,
+    findUserOrderForUpdate,
+    getOrderInventory,
+    updateUserOrderStatus,
     placeOrder,
     addOrderItems
 };

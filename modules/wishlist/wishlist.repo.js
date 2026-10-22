@@ -1,23 +1,38 @@
 import conn from "../../config/db.config.js";
+import {
+    DEFAULT_WISHLIST_PAGE_SIZE,
+    MAX_WISHLIST_OFFSET,
+    MAX_WISHLIST_PAGE_SIZE
+} from "./wishlist.pagination.js";
 
 //get user white list
 const getWhishlist = async(userId, limit, offset, ctx = {db:conn}) => {
+    const boundedLimit = Number.isSafeInteger(limit)
+        ? Math.min(Math.max(limit, 1), MAX_WISHLIST_PAGE_SIZE)
+        : DEFAULT_WISHLIST_PAGE_SIZE;
+    const boundedOffset = Number.isSafeInteger(offset)
+        ? Math.min(Math.max(offset, 0), MAX_WISHLIST_OFFSET)
+        : 0;
+
     const query = `
-        WITH user_products AS (
-            SELECT id, name, description, price, rating, num_reviews
-            FROM products 
-        ),
-
-        white_products AS (
-            SELECT id, user_id
-            FROM wishlists
-            WHERE user_id = $1 
-        )
-
-        SELECT wi.id, up.name, up.description, up.price, up.rating, up.num_reviews
-        FROM user_products up
-        JOIN wishlist_items wi ON wi.product_id = up.id
-        JOIN white_products wp ON wp.id = wi.wishlist_id
+        SELECT
+            wi.id AS wishlist_item_id,
+            p.id,
+            p.category_id,
+            c.slug AS category,
+            p.name,
+            COALESCE(p.description, '') AS description,
+            p.price::float AS price,
+            COALESCE(p.image, '') AS image,
+            p.stock,
+            p.rating::float AS rating,
+            p.num_reviews,
+            p.created_at
+        FROM wishlists w
+        JOIN wishlist_items wi ON wi.wishlist_id = w.id
+        JOIN products p ON p.id = wi.product_id
+        JOIN categories c ON c.id = p.category_id
+        WHERE w.user_id = $1
         ORDER BY wi.id
         LIMIT $2 OFFSET $3
     `;
@@ -30,7 +45,7 @@ const getWhishlist = async(userId, limit, offset, ctx = {db:conn}) => {
     `;
 
     const [{rows}, {rows: countRows}] = await Promise.all([
-        ctx.db.query(query, [userId, limit, offset]),
+        ctx.db.query(query, [userId, boundedLimit, boundedOffset]),
         ctx.db.query(countQuery, [userId])
     ]);
     return {data: rows, totalCount: Number(countRows[0].total_count)};
@@ -59,6 +74,17 @@ const addToWishlist = async(data, ctx) => {
 
     const {rows} = await ctx.db.query(query, [data.wishListId, data.productId]);
     return rows[0];
+}
+
+const countWishlistItems = async(wishlistId, ctx) => {
+    const query = `
+        SELECT COUNT(*) AS total_count
+        FROM wishlist_items
+        WHERE wishlist_id = $1
+    `;
+
+    const {rows} = await ctx.db.query(query, [wishlistId]);
+    return Number(rows[0].total_count);
 }
 
 //find white list by user id
@@ -90,6 +116,7 @@ export{
     getWhishlist,
     initializeWhishlist,
     addToWishlist,
+    countWishlistItems,
     findWhishlist,
     deleteFromWhishList
 }

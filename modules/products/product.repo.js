@@ -3,13 +3,107 @@ import conn from "../../config/db.config.js";
 //Get product details
 const viewProduct = async (id, ctx = {db: conn}) => {
     const query = `
-        SELECT id, name, description, image, price, stock, rating, num_reviews, created_at
+        SELECT id, category_id, name, description, image, price, stock, rating, num_reviews, created_at
         FROM products
         WHERE id = $1
     `;
 
     const {rows} = await ctx.db.query(query, [id]);
     return rows[0];
+}
+
+const getProductForManagement = async (id, ctx = {db: conn}) => {
+    const query = `
+        SELECT p.id, p.category_id AS "categoryId", c.slug AS category,
+            p.name, COALESCE(p.description, '') AS description,
+            p.price::float AS price, COALESCE(p.image, '') AS image, p.stock,
+            p.rating::float AS rating, p.num_reviews AS "numReviews",
+            p.created_at AS "createdAt"
+        FROM products p
+        JOIN categories c ON c.id = p.category_id
+        WHERE p.id = $1
+    `;
+
+    const {rows} = await ctx.db.query(query, [id]);
+    return rows[0];
+}
+
+const createProduct = async (data, ctx) => {
+    const query = `
+        INSERT INTO products (category_id, name, slug, description, price, stock, image)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+    `;
+
+    const {rows} = await ctx.db.query(query, [
+        data.categoryId,
+        data.name,
+        data.slug,
+        data.description,
+        data.price,
+        data.stock,
+        data.image
+    ]);
+    return rows[0];
+}
+
+const updateProductDetails = async (id, data, ctx) => {
+    const fields = {
+        categoryId: "category_id",
+        name: "name",
+        slug: "slug",
+        description: "description",
+        price: "price",
+        stock: "stock",
+        image: "image"
+    };
+    const updates = [];
+    const values = [];
+
+    for (const [field, column] of Object.entries(fields)) {
+        if (Object.hasOwn(data, field)) {
+            values.push(data[field]);
+            updates.push(`${column} = $${values.length}`);
+        }
+    }
+
+    updates.push("updated_at = NOW()");
+    values.push(id);
+
+    const query = `
+        UPDATE products
+        SET ${updates.join(", ")}
+        WHERE id = $${values.length}
+        RETURNING id
+    `;
+
+    const {rows} = await ctx.db.query(query, values);
+    return rows[0];
+}
+
+const deleteProduct = async (id, ctx) => {
+    const query = `
+        DELETE FROM products
+        WHERE id = $1
+        RETURNING id
+    `;
+
+    const {rows} = await ctx.db.query(query, [id]);
+    return rows[0];
+}
+
+//Load and lock all products for an order in one query.
+const getProductsByIdsForUpdate = async (ids, ctx = {db: conn}) => {
+    const query = `
+        SELECT id, name, price, stock
+        FROM products
+        WHERE id = ANY($1::uuid[])
+        ORDER BY id
+        FOR UPDATE
+    `;
+
+    const {rows} = await ctx.db.query(query, [ids]);
+    return rows;
 }
 
 //Lock a product while review rows and their aggregate are being changed.
@@ -114,6 +208,20 @@ const productStock = async (data, ctx) => {
     return rows[0];
 }
 
+// Restore stock from a persisted order item while its order is locked by the
+// cancellation transaction.
+const restoreProductStock = async (data, ctx) => {
+    const query = `
+        UPDATE products
+        SET stock = stock + $1
+        WHERE id = $2
+        RETURNING id, stock
+    `;
+
+    const {rows} = await ctx.db.query(query, [data.quantity, data.id]);
+    return rows[0];
+}
+
 //Update product rating and review number
 const updateProduct = async(id, ctx) =>{
     const query = `
@@ -139,8 +247,14 @@ const updateProduct = async(id, ctx) =>{
 
 export {
     viewProduct,
+    getProductForManagement,
+    createProduct,
+    updateProductDetails,
+    deleteProduct,
+    getProductsByIdsForUpdate,
     lockProduct,
     getProducts,
     productStock,
+    restoreProductStock,
     updateProduct
 }

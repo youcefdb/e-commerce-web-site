@@ -1,16 +1,26 @@
 
+import { AppError } from "../errors/errors.js";
+
+export const MAX_PAGE = 10_000;
+export const MAX_PAGE_SIZE = 100;
+
 //Get pagination with errors handling
 const getPagination = (page = 1, limit = 10) => {
-    
-    //handle negative values
-    const safePage = Math.max(Number(page) || 1, 1);
-    const safeLimit = Math.max(Number(limit) || 10, 1);
+    if (!Number.isSafeInteger(page) || page < 1 || page > MAX_PAGE) {
+        throw AppError("Invalid page", 400);
+    }
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_PAGE_SIZE) {
+        throw AppError("Invalid limit", 400);
+    }
 
-    const offset = (safePage - 1) * safeLimit
+    const offset = (page - 1) * limit;
+    if (!Number.isSafeInteger(offset) || offset > Number.MAX_SAFE_INTEGER) {
+        throw AppError("Invalid pagination offset", 400);
+    }
 
     return {
-        safePage,
-        safeLimit,
+        safePage: page,
+        safeLimit: limit,
         offset
     }
 }

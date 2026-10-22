@@ -1,0 +1,4 @@
+export const DEFAULT_ORDERS_PAGE_SIZE = 20;
+export const MAX_ORDERS_PAGE_SIZE = 100;
+export const MAX_ORDERS_PAGE = 10_000;
+export const MAX_ORDERS_OFFSET = (MAX_ORDERS_PAGE - 1) * MAX_ORDERS_PAGE_SIZE;

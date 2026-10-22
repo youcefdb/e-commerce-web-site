@@ -16,12 +16,16 @@ CREATE TABLE users (
     password TEXT,
     role VARCHAR(20) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin')),
     provider VARCHAR(50) NOT NULL DEFAULT 'local',
+    email_verified_at TIMESTAMPTZ,
+    google_id TEXT UNIQUE,
     avatar TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_users_role
 ON users(role);
+CREATE UNIQUE INDEX idx_users_email_lower
+ON users(LOWER(email));
 
 -- =========================================================
 -- CATEGORIES
@@ -183,8 +187,27 @@ CREATE TABLE refresh_tokens(
     created_at TIMESTAMP DEFAULT now()
 );
 
+CREATE TABLE email_verification_tokens (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    pending_google_id TEXT,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE google_link_states (
+    state_hash CHAR(64) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX idx_refresh_tokens_user
 ON refresh_tokens(user_id);
+
+CREATE INDEX idx_refresh_tokens_expires_at
+ON refresh_tokens(expires_at, id);
 
 -- =========================================================
 -- wish list
@@ -321,5 +344,6 @@ ON reviews(user_id);
 
 -- IDEMPOTENCY KEYS
 
-CREATE INDEX idx_idempotency_keys_expires_at
-ON idempotency_keys(expires_at);
+CREATE INDEX idx_idempotency_keys_completed_expires_at
+ON idempotency_keys(expires_at, id)
+WHERE status = 'completed';

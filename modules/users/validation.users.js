@@ -5,12 +5,11 @@ const updateUserSchema = Joi.object({
     email: Joi.string().email().optional(),
     name: Joi.string().trim().min(2).optional(),
     password: Joi.string().trim().min(8).optional(),
-    currentPassword: Joi.string().when("password", {
-        is: Joi.exist(),
-        then: Joi.required(),
-        otherwise: Joi.forbidden()
-    })
-}).unknown(false);
+    currentPassword: Joi.string().trim()
+}).or("name", "email", "password")
+    .with("email", "currentPassword")
+    .with("password", "currentPassword")
+    .unknown(false);
 
 
 export{

@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { MAX_PAGE, MAX_PAGE_SIZE } from "../../utils/responce.util.js";
 
 //get reviews schema
 const getReviewsParamsSchema = Joi.object({
@@ -6,8 +7,8 @@ const getReviewsParamsSchema = Joi.object({
 }).unknown(false);
 
 const getReviewsQuerySchema = Joi.object({
-    page: Joi.number().integer().min(1).default(1),
-    limit: Joi.number().integer().min(1).max(100).default(20)
+    page: Joi.number().integer().min(1).max(MAX_PAGE).default(1),
+    limit: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).default(20)
 }).unknown(false);
 
 //add review schema
@@ -30,7 +31,7 @@ const editReviewParamsSchema = Joi.object({
 }).unknown(false);
 
 const editReviewSchema = Joi.object({
-    rating: Joi.number().min(1).max(5).optional(),
+    rating: Joi.number().integer().min(1).max(5).optional(),
     comment: Joi.string().trim().min(2).max(500).optional()
 }).unknown(false);
 

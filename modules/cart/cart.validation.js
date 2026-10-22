@@ -13,7 +13,7 @@ const cartItemParamsSchema = Joi.object({
 
 //Edit amount of a product in the request body
 const editProductQuantitySchema = Joi.object({
-    quantity: Joi.number().integer().max(10).required(),
+    quantity: Joi.number().integer().min(1).max(10).required(),
 }).unknown(false);
 
 

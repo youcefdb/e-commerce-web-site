@@ -3,7 +3,11 @@ import * as orderController from "./orders.services.js";
 
 //Get user order
 const getOrder = asyncHandler(async(req, res) => {
-    const result = await orderController.getOrders(req.user.id);
+    const result = await orderController.getOrders(
+        req.user.id,
+        req.validatedQuery.page,
+        req.validatedQuery.limit
+    );
     return res.status(200).json(result);
 })
 
@@ -15,13 +19,12 @@ const getOrderDetails = asyncHandler(async(req, res) => {
 
 //create order
 const placeOrder = asyncHandler(async(req, res) => {
-    const result = await orderController.placeOrder(req.body, req.user.id, req.idempotencyKey);
+    const result = await orderController.placeOrder(req.body, req.user.id, req.idempotencyKey, req.idempotencyHash);
     return res.status(200).json(result);
 });
 
-//Update order status
-const updateOrderStatus = asyncHandler(async(req, res) => {
-    const result = await orderController.updateOrderStatus(req.body, req.params.id, req.user.id, req.idempotencyKey);
+const cancelOrder = asyncHandler(async(req, res) => {
+    const result = await orderController.cancelOrder(req.params.id, req.user.id);
     return res.status(200).json(result);
 });
 
@@ -29,5 +32,5 @@ export {
     getOrder,
     getOrderDetails,
     placeOrder,
-    updateOrderStatus
+    cancelOrder
 }

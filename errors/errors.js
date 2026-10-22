@@ -2,6 +2,7 @@
 const AppError = (msg, statusCode = 500) => {
     const error = new Error(msg);
     error.statusCode = statusCode
+    error.isAppError = true;
     return error;
 }
 

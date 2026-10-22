@@ -8,10 +8,10 @@ const getReviews = async (data, ctx = {db: conn}) => {
             FROM users
         )
 
-        SELECT u.*, r.comment, r.rating
+        SELECT r.id, r.product_id, r.user_id, u.name, u.avatar, r.comment, r.rating, r.created_at
         FROM reviews r
         JOIN userInfo u ON u.id = r.user_id
-        WHERE product_id = $1
+        WHERE r.product_id = $1
         ORDER BY r.created_at, r.id
         LIMIT $2 OFFSET $3
     `;

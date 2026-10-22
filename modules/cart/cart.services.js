@@ -9,6 +9,12 @@ const addProductToCart = async (data, userId) => {
         var cart = await cartRepo.findCartByUserId(userId, {db: client});
         if (!cart) {
             cart = await cartRepo.initializeCart(userId, new Date(), {db: client});
+            if (!cart) {
+                cart = await cartRepo.findCartByUserId(userId, {db: client});
+            }
+            if (!cart) {
+                throw AppError("Failed to initialize cart", 500);
+            }
         }
 
         const product = await viewProduct(data.productId, {db: client});
@@ -26,7 +32,7 @@ const addProductToCart = async (data, userId) => {
         }, {db: client});
 
         if (!item) {
-            throw AppError("Requested quantity exceeds available stock", 400);
+            throw AppError("Requested quantity exceeds available stock or cart limit", 400);
         }
 
         
@@ -97,6 +103,10 @@ const editProductQuantity = async (data, userId) => {
         throwIfNotFound(cart, "Your cart is empty");
 
         try {
+            if (data.quantity > 10) {
+                throw AppError("Product quantity cannot exceed 10", 400);
+            }
+
             const product = await viewProduct(data.id, {db: client});
             throwIfNotFound(product, "Product not found");
             

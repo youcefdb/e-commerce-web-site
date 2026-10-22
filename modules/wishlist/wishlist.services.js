@@ -3,9 +3,21 @@ import { buildResponce, getPagination } from "../../utils/responce.util.js";
 import withTransaction from "../../utils/transaction.util.js";
 import { viewProduct } from "../products/product.repo.js";
 import * as wishListRepo from "./wishlist.repo.js";
+import {
+    DEFAULT_WISHLIST_PAGE_SIZE,
+    MAX_WISHLIST_PAGE,
+    MAX_WISHLIST_PAGE_SIZE
+} from "./wishlist.pagination.js";
 
 //Get white list content
-const getWishlist = async(userId, page, limit) => {
+const getWishlist = async(userId, page = 1, limit = DEFAULT_WISHLIST_PAGE_SIZE) => {
+    if (!Number.isSafeInteger(page) || page < 1 || page > MAX_WISHLIST_PAGE) {
+        throw AppError("Invalid page", 400);
+    }
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_WISHLIST_PAGE_SIZE) {
+        throw AppError("Invalid limit", 400);
+    }
+
     const {safePage, safeLimit, offset} = getPagination(page, limit);
     
     const result = await wishListRepo.getWhishlist(userId, safeLimit, offset);
@@ -32,9 +44,11 @@ const addTowishlist = async(data, userId) => {
         } catch (error) {
             throw error;
         }
+        const count = await wishListRepo.countWishlistItems(wishlist.id, {db: client});
+
         return {
             data: result, 
-            count: result.length
+            count
         }
     });
 }

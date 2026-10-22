@@ -1,12 +1,18 @@
 import path from "path";
 import { AppError, throwIfNotFound } from "../../errors/errors.js";
 import withTransaction from "../../utils/transaction.util.js";
-import { findUserByEmail, findUserById, logoutAllSession } from "../auth/auth.repo.js";
+import {
+    findUserByEmail,
+    findUserById,
+    logoutAllSession,
+    storeEmailVerificationToken
+} from "../auth/auth.repo.js";
 import * as usersRepo from "../users/repo.users.js";
 import fs from "fs/promises";
-import sharp from "sharp";
+import processImage from "../../utils/processImage.util.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { sendVerificationEmail } from "../auth/email.service.js";
 
 const uploadDir = path.join(process.cwd(), "upload", "image");
 await fs.mkdir(uploadDir, {recursive: true});
@@ -26,8 +32,8 @@ const getStoredPhotoPath = (avatar) => {
 };
 
 //Update user profile
-const updateUser = (userId, data) => {
-    return withTransaction(async(client) => {
+const updateUser = async (userId, data) => {
+    const updated = await withTransaction(async(client) => {
         const {name, email, password} = data;
         const user = await findUserById(userId, {db: client});
         throwIfNotFound(user, "User not found");
@@ -36,11 +42,24 @@ const updateUser = (userId, data) => {
         let values = [];
         let index = 2;
         let passwordChanged = false;
+        let emailChanged = false;
+        let verification = null;
 
         if (email) {
-            const findEmail = await findUserByEmail(email, {db: client});
+            const normalizedEmail = email.toLowerCase();
+            const findEmail = await findUserByEmail(normalizedEmail, {db: client});
 
-            if (email === user.email ) {
+            if (!password) {
+                if (!user.password) {
+                    throw AppError("Set a password before changing your email address", 409);
+                }
+                const validCurrentPassword = await bcrypt.compare(data.currentPassword, user.password);
+                if (!validCurrentPassword) {
+                    throw AppError("Current password is incorrect", 401);
+                }
+            }
+
+            if (normalizedEmail === user.email.toLowerCase() ) {
                 throw AppError("Can't update email with current email", 409);
             }
 
@@ -49,7 +68,10 @@ const updateUser = (userId, data) => {
             }
 
             params.push(`email = $${index++}`);
-            values.push(email);
+            values.push(normalizedEmail);
+            params.push(`email_verified_at = $${index++}`);
+            values.push(null);
+            emailChanged = true;
         }
 
         if (name) {
@@ -78,7 +100,17 @@ const updateUser = (userId, data) => {
             params.push(`updated_at = $${index++}`);
             values.push(new Date());
             var result = await usersRepo.updateUser(params, values, user.id, {db: client});
-            if (passwordChanged) {
+            if (emailChanged) {
+                const token = crypto.randomBytes(32).toString("base64url");
+                const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+                await storeEmailVerificationToken({
+                    userId: user.id,
+                    tokenHash,
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+                }, {db: client});
+                verification = {email: email.toLowerCase(), token};
+            }
+            if (passwordChanged || emailChanged) {
                 await logoutAllSession(user.id, {db: client});
             }
         }else{
@@ -87,9 +119,22 @@ const updateUser = (userId, data) => {
 
         return {
             message: "Profile updated seccessfully",
-            data: result
-        }
+            data: result,
+            verification
+        };
     });
+    if (updated.verification) {
+        try {
+            await sendVerificationEmail(updated.verification.email, updated.verification.token);
+        } catch {
+            throw AppError("Email changed, but the verification email could not be sent. Request a new verification email using the new email and your password.", 503);
+        }
+    }
+    delete updated.verification;
+    if (data.email) {
+        updated.message = "Profile updated. Verify the new email address before signing in again.";
+    }
+    return updated;
 }
 
 //Get user profile
@@ -113,11 +158,15 @@ const viewProfile = async (userId) => {
 
 //upload or update photo
 const uploadProfilePic = async (photo, userId) => {
+    if (!photo) {
+        throw AppError("Image is required", 400);
+    }
+
     const user = await findUserById(userId);
     throwIfNotFound(user, "User not found");
 
     //validate image
-    const photoBuffer = await processPhoto(photo);
+    const photoBuffer = await processImage(photo);
 
     const fileName = `${crypto.randomUUID()}.webp`; //new file name
     const absolutePath = path.join(uploadDir, fileName); //Image complete path
@@ -129,6 +178,7 @@ const uploadProfilePic = async (photo, userId) => {
     try {
         await fs.writeFile(absolutePath, photoBuffer);
     } catch (error) {
+        await fs.unlink(absolutePath).catch(() => {});
         throw AppError("Failed to save image", 500);
     }
 
@@ -166,24 +216,6 @@ const uploadProfilePic = async (photo, userId) => {
         throw error;
     }
 };
-
-// Decode, resize, and re-encode as WebP
-const processPhoto = async(photo) => {
-    try {
-        //Decoding and re-decoding(removing unnecessary metadata)
-        const output = await sharp(photo.buffer)
-            .resize({
-                withoutEnlargement: true, //If the photo is small let it as it is
-                width: 800 //otherwise 800pxl
-            })
-            .webp({quality: 80}) //Change it to webp with 80
-            .toBuffer(); //The output should be in bianry(nodejs buffer)
-
-        return output;
-    } catch (error) {
-        throw AppError("Invalid Photo", 400);
-    }
-}
 
 //Remove profile picture
 const removePhoto = async(userId) => {

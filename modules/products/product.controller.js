@@ -46,7 +46,25 @@ const viewProduct = asyncHandler(async (req, res) => {
     return res.status(200).json(result);
 })
 
+const createProduct = asyncHandler(async (req, res) => {
+    const result = await productServers.createProduct(req.body);
+    return res.status(201).json(result);
+});
+
+const updateProduct = asyncHandler(async (req, res) => {
+    const result = await productServers.updateProduct(req.params.id, req.body);
+    return res.status(200).json(result);
+});
+
+const deleteProduct = asyncHandler(async (req, res) => {
+    const result = await productServers.deleteProduct(req.params.id);
+    return res.status(200).json(result);
+});
+
 export{
     getProducts,
-    viewProduct
+    viewProduct,
+    createProduct,
+    updateProduct,
+    deleteProduct
 }

@@ -43,8 +43,11 @@ app.use("/api/v1/products", productRoot);
 app.use("/api/v1/categories", categoriesRoot);
 app.use("/api/v1/reviews", reviewRoot);
 
+// Profile photos are referenced by public review responses and loaded by <img> tags,
+// which cannot attach the frontend's in-memory bearer token.
+app.use("/upload/image", express.static(path.join(process.cwd(), "upload", "image")));
+
 app.use(verifyJwtToken, roleAuthorize(PERMISSION.CUSTOMER, PERMISSION.ADMIN));
-app.use("/upload", express.static(path.join(process.cwd(), "upload")))
 app.use("/api/v1/users", userRoot);
 app.use("/api/v1/cart", cartRoot);
 app.use("/api/v1/whishLists", whiteListRoot);

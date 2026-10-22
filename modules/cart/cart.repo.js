@@ -16,11 +16,12 @@ const addItemToCart = async (data, ctx) => {
 const addOrIncrementItemOnCart = async (data, ctx) => {
     const query = `
         INSERT INTO cart_items(cart_id, product_id, quantity)
-        VALUES($1, $2, $3)
+        SELECT $1, $2, $3
+        WHERE $3 <= LEAST($4, 10)
         ON CONFLICT (cart_id, product_id)
         DO UPDATE
         SET quantity = cart_items.quantity + EXCLUDED.quantity
-        WHERE cart_items.quantity + EXCLUDED.quantity <= $4
+        WHERE cart_items.quantity + EXCLUDED.quantity <= LEAST($4, 10)
         RETURNING id, cart_id, product_id, quantity
     `;
 
@@ -38,6 +39,7 @@ const initializeCart = async (userId, createdAt, ctx) => {
     const query = `
         INSERT INTO carts(user_id, created_at)
         VALUES($1, $2)
+        ON CONFLICT (user_id) DO NOTHING
         RETURNING *
     `;
 
@@ -130,6 +132,7 @@ const editProductQuantity = async(data, ctx) => {
         FROM user_cart uc
         WHERE uc.id = ci.cart_id
         AND ci.product_id = $3
+        AND $2 <= 10
         RETURNING ci.id, ci.cart_id, ci.product_id, ci.quantity;
     `;
 

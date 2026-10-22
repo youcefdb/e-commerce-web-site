@@ -30,8 +30,20 @@ const loginValidationSchema = Joi.object({
     }),
 }).unknown(false);
 
+const resendVerificationSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().trim().min(8).required()
+}).unknown(false);
+
+const verifyEmailQuerySchema = Joi.object({
+    token: Joi.string().pattern(/^[A-Za-z0-9_-]{40,100}$/).required(),
+    confirm: Joi.string().valid("1").optional()
+}).unknown(false);
+
 
 export{
     registerValidationSchema,
-    loginValidationSchema
+    loginValidationSchema,
+    resendVerificationSchema,
+    verifyEmailQuerySchema
 }

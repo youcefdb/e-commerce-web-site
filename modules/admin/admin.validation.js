@@ -1,18 +1,19 @@
 import joi from "joi";
+import { orderStatuses } from "../orders/order.validation.js";
 
-const updateOrderStatusSchema = joi.object({
-    status: joi.string().trim().lowercase().valid(
-        "pending",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled"
-    ).required(),
-
+const updateOrderStatusParamsSchema = joi.object({
     id: joi.string().trim().uuid().required()
-}).unknown(true);
+}).unknown(false);
+
+const updateOrderStatusBodySchema = joi.object({
+    status: joi.string().trim().lowercase().valid(...orderStatuses).required()
+}).unknown(false);
+
+const adminListQuerySchema = joi.object().max(0);
 
 
 export {
-    updateOrderStatusSchema
+    updateOrderStatusParamsSchema,
+    updateOrderStatusBodySchema,
+    adminListQuerySchema
 }
